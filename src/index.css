@@ -1,0 +1,15 @@
+/* Reemplaza TODO el contenido de src/index.css por esto */
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: #0f172a;
+  width: 100%;
+  min-height: 100vh;
+}
+
+#root {
+  max-width: 1280px !important;
+  margin: 0 auto !important;
+  padding: 0 16px !important;
+  width: 100% !important;
+}
