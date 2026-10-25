@@ -18,16 +18,64 @@ const DEFAULT_SERVICES = [
     icon: '🍊'
   },
   {
-    id: 'mortero_alto_trafico',
-    name: 'Mortero Epóxico de Alto Tráfico',
-    description: 'Sistema reinforced de alto espesor (3-6mm) diseñado para soportar choque térmico, impacto pesado y cargas extremas.',
-    basePrice: 520,
+    id: 'flakes-hojuela',
+    name: 'Sistema Flakes / Hojuela',
+    description: 'Acabado decorativo y de alta durabilidad con hojuelas de vinilo encapsuladas en resina transparente. Ideal para cocheras, salas de exhibición, oficinas y comercios.',
+    basePrice: 380,
+    unit: 'm²',
+    icon: '🎨'
+  },
+  {
+    id: 'cuarzo-sembrado',
+    name: 'Sistema Epóxico de Cuarzo',
+    description: 'Matriz epóxica saturada con arenas de cuarzo pigmentadas. Ofrece altísima resistencia al desgaste, propiedades antideslizantes e impermeabilidad total.',
+    basePrice: 420,
+    unit: 'm²',
+    icon: '💎'
+  },
+  {
+    id: 'terrazo-epoxico',
+    name: 'Sistema Terrazo Epóxico',
+    description: 'Acabado arquitectónico de lujo compuesto por resina epóxica y agregados de mármol o granito, devastado y pulido a espejo. Ciclo de vida superior a 30 años.',
+    basePrice: 1200,
+    unit: 'm²',
+    icon: '🏛️'
+  },
+  {
+    id: 'uretano-cementicio',
+    name: 'Mortero Uretano Cementicio',
+    description: 'Diseñado para condiciones extremas: soporte de choque térmico (-40 °C a 120 °C), humedad severa, químicos agresivos y tráfico pesado constante. Indispensable en industria alimentaria y química.',
+    basePrice: 650,
+    unit: 'm²',
+    icon: '🛡️'
+  },
+  {
+    id: 'pintura-poliuretano',
+    name: 'Pintura / Acabado en Poliuretano',
+    description: 'Recubrimiento protector con alta estabilidad a los rayos UV (no se amarillea a la intemperie) y excelente resistencia al rayado y a solventes.',
+    basePrice: 220,
+    unit: 'm²',
+    icon: '☀️'
+  },
+  {
+    id: 'antiderrapante-texturizado',
+    name: 'Sistema Epóxico Antiderrapante',
+    description: 'Acabado texturizado con siembra de óxido de aluminio o sílice para maximizar la tracción en rampas, pasillos industriales, zonas húmedas y áreas de maniobra.',
+    basePrice: 280,
+    unit: 'm²',
+    icon: '⚠️'
+  },
+  {
+    id: 'mortero-epoxico',
+    name: 'Mortero Epóxico de Alta Resistencia',
+    description: 'Capa gruesa (3 mm a 6 mm) para nivelar o reparar pisos de concreto severamente dañados antes de la capa final, soportando altas cargas puntuales e impacto mecánico.',
+    basePrice: 480,
     unit: 'm²',
     icon: '🏗️'
   },
   {
-    id: 'sello_poliuretano',
-    name: 'Sello Epóxico / Poliuretano',
+    id: 'sello_epoxico',
+    name: 'Sello Epóxico',
     description: 'Recubrimiento delgado para protección contra polvo, abrasión ligera y sellado de pisos de concreto existentes.',
     basePrice: 180,
     unit: 'm²',
@@ -78,31 +126,57 @@ const DEFAULT_EXTRAS = [
     useArea: false
   },
   {
-    id: 'preparacion_granallado',
-    name: 'Perfilado por Granallado (Shotblasting)',
-    description: 'Para máxima adherencia mecánica en proyectos industriales críticos',
-    unitPrice: 40,
+    id: 'bacheo_reparacion',
+    name: 'Bacheo y Calafateo Profundo',
+    description: 'Demolición de concreto dañado, limpieza y relleno con mortero epóxico o uretano de alta resistencia mecánica.',
+    unitPrice: 250,
     unit: 'm²',
     useArea: true
   },
   {
-    id: 'color_personalizado',
-    name: 'Color Personalizado RAL / Señalética',
-    description: 'Pigmentación especial fuera de catálogo estándar o delimitación de pasillos',
-    unitPrice: 35,
-    unit: 'm²',
-    useArea: true
+    id: 'demarcacion_lineas',
+    name: 'Líneas de Delimitación y Señalética (10 cm)',
+    description: 'Trazado y pintura epóxica/poliuretano de alta visibilidad en 10 cm de ancho para delimitación de pasillos, pasos peatonales y cajones.',
+    unitPrice: 45,
+    unit: 'm', // Se cotiza por metro lineal
+    useArea: false
   },
   {
-    id: 'trafico_pesado_extra',
-    name: 'Refuerzo de Poliuretano Alifático (Anti-UV)',
-    description: 'Capa superior extra resistente al rayado y rayos solares UV directo',
+    id: 'tratamiento_grietas',
+    name: 'Sellado y Cursado de Grietas / Juntas',
+    description: 'Apertura de grietas con disco de diamante, limpieza con aire a presión y sellado con elastómero o epóxico semi-rígido.',
     unitPrice: 65,
+    unit: 'm', // Se cotiza por metro lineal
+    useArea: false
+  },
+  {
+    id: 'curado_humedad',
+    name: 'Barrera Anti-Humedad (Primer FDT)',
+    description: 'Tratamiento primario epóxico tolerante a la humedad para losas de concreto con niveles de humedad relativa superiores al 4%.',
+    unitPrice: 110,
     unit: 'm²',
     useArea: true
-  }
+  },
 ];
+const handleDownloadPDF = () => {
+  const element = document.querySelector('.pdf-container');
 
+  // Si html2pdf está cargado, genera el PDF descargable
+  if (window.html2pdf && element) {
+    const opt = {
+      margin:       [8, 10, 8, 10], // mm
+      filename:     `Cotizacion_Enrique_Lara_${new Date().toISOString().slice(0,10)}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true },
+      jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(element).save();
+  } else {
+    // Si no cargó la librería, usa la impresión del sistema
+    window.print();
+  }
+};
 export default function App() {
   const [services, setServices] = useState(() => {
     try {
@@ -1074,7 +1148,7 @@ _Generado desde Cotizador Enrique Lara._`;
                 </button>
 
                 <button
-                  onClick={handlePrint}
+                  onClick={handleDownloadPDF}
                   className="flex-1 sm:flex-none bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-bold px-3.5 py-2 rounded-lg flex items-center justify-center gap-2 text-xs sm:text-sm shadow-md transition-all"
                 >
                   📥 Descargar PDF
