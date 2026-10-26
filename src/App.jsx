@@ -533,7 +533,7 @@ export default function App() {
   @media print {
     @page {
       size: letter portrait;
-      margin: 12mm;
+      margin: 0 !important; /* 👈 Elimina encabezados, URL, fecha y pie de página de iOS */
     }
 
     *, *::before, *::after {
@@ -547,7 +547,7 @@ export default function App() {
       background-color: #ffffff !important;
       color: #0f172a !important;
       margin: 0 !important;
-      padding: 0 !important;
+      padding: 12mm 10mm !important; /* 👈 Le da el margen limpio a la hoja sin usar el de Safari */
       width: 100% !important;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
@@ -585,7 +585,6 @@ export default function App() {
     }
   }
 `}</style>
-
       {/* HEADER RESPONSIVO */}
       <header className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-slate-800 shadow-xl print:hidden w-full">
         <div className="max-w-6xl mx-auto px-4 py-3 sm:py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
