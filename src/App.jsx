@@ -138,7 +138,7 @@ const DEFAULT_EXTRAS = [
     name: 'Líneas de Delimitación y Señalética (10 cm)',
     description: 'Trazado y pintura epóxica/poliuretano de alta visibilidad en 10 cm de ancho para delimitación de pasillos, pasos peatonales y cajones.',
     unitPrice: 45,
-    unit: 'm', // Se cotiza por metro lineal
+    unit: 'm',
     useArea: false
   },
   {
@@ -146,7 +146,7 @@ const DEFAULT_EXTRAS = [
     name: 'Sellado y Cursado de Grietas / Juntas',
     description: 'Apertura de grietas con disco de diamante, limpieza con aire a presión y sellado con elastómero o epóxico semi-rígido.',
     unitPrice: 65,
-    unit: 'm', // Se cotiza por metro lineal
+    unit: 'm',
     useArea: false
   },
   {
@@ -156,27 +156,9 @@ const DEFAULT_EXTRAS = [
     unitPrice: 110,
     unit: 'm²',
     useArea: true
-  },
-];
-const handleDownloadPDF = () => {
-  const element = document.querySelector('.pdf-container');
-
-  // Si html2pdf está cargado, genera el PDF descargable
-  if (window.html2pdf && element) {
-    const opt = {
-      margin:       [8, 10, 8, 10], // mm
-      filename:     `Cotizacion_Enrique_Lara_${new Date().toISOString().slice(0,10)}.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true },
-      jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
-    };
-
-    html2pdf().set(opt).from(element).save();
-  } else {
-    // Si no cargó la librería, usa la impresión del sistema
-    window.print();
   }
-};
+];
+
 export default function App() {
   const [services, setServices] = useState(() => {
     try {
@@ -186,13 +168,7 @@ export default function App() {
       return DEFAULT_SERVICES;
     }
   });
-const handleResetApp = () => {
-    if (window.confirm('¿Deseas restablecer el catálogo al estado maestro? Se actualizarán los servicios con los cambios más recientes.')) {
-      localStorage.removeItem('el_custom_services');
-      localStorage.removeItem('el_custom_extras');
-      window.location.reload();
-    }
-  };
+
   const [extrasOptions, setExtrasOptions] = useState(() => {
     try {
       const saved = localStorage.getItem('el_custom_extras');
@@ -214,11 +190,11 @@ const handleResetApp = () => {
     } catch(e) {}
   }, [extrasOptions]);
 
+  // Manejo de sistemas seleccionados con m2 individuales por sistema
   const [selectedSystems, setSelectedSystems] = useState([
-    { serviceId: 'autonivelante', customPrice: undefined }
+    { serviceId: 'autonivelante', m2: 150, customPrice: undefined }
   ]);
 
-  const [areaM2, setAreaM2] = useState(150);
   const [surfaceConditionId, setSurfaceConditionId] = useState('regular');
   const [includeIva, setIncludeIva] = useState(true);
 
@@ -249,6 +225,14 @@ const handleResetApp = () => {
 
   const [activeTab, setActiveTab] = useState('cotizador');
 
+  const handleResetApp = () => {
+    if (window.confirm('¿Deseas restablecer el catálogo al estado maestro? Se actualizarán los servicios y adicionales.')) {
+      localStorage.removeItem('el_custom_services');
+      localStorage.removeItem('el_custom_extras');
+      window.location.reload();
+    }
+  };
+
   const toggleSystemSelection = (serviceId) => {
     setSelectedSystems(prev => {
       const exists = prev.some(item => item.serviceId === serviceId);
@@ -256,9 +240,16 @@ const handleResetApp = () => {
         if (prev.length === 1) return prev;
         return prev.filter(item => item.serviceId !== serviceId);
       } else {
-        return [...prev, { serviceId, customPrice: undefined }];
+        return [...prev, { serviceId, m2: 100, customPrice: undefined }];
       }
     });
+  };
+
+  const handleM2Change = (serviceId, newM2) => {
+    const val = Math.max(1, Number(newM2) || 0);
+    setSelectedSystems(prev =>
+      prev.map(item => item.serviceId === serviceId ? { ...item, m2: val } : item)
+    );
   };
 
   const handlePriceChange = (serviceId, newPrice) => {
@@ -345,6 +336,11 @@ const handleResetApp = () => {
     return SURFACE_CONDITIONS.find(c => c.id === surfaceConditionId) || SURFACE_CONDITIONS[0];
   }, [surfaceConditionId]);
 
+  // Área total suma de todos los sistemas seleccionados
+  const totalAreaM2 = useMemo(() => {
+    return selectedSystems.reduce((acc, sys) => acc + (Number(sys.m2) || 0), 0);
+  }, [selectedSystems]);
+
   const activeSystemsDetailed = useMemo(() => {
     return selectedSystems.map(item => {
       const serviceObj = services.find(s => s.id === item.serviceId) || services[0];
@@ -352,12 +348,14 @@ const handleResetApp = () => {
         ? Number(item.customPrice)
         : serviceObj.basePrice;
       
+      const sysM2 = item.m2 !== undefined ? Number(item.m2) : 100;
       const isModified = item.customPrice !== undefined && Number(item.customPrice) !== serviceObj.basePrice;
       const adjustedUnitPrice = effectivePrice * condition.multiplier;
-      const totalCost = adjustedUnitPrice * areaM2;
+      const totalCost = adjustedUnitPrice * sysM2;
 
       return {
         ...serviceObj,
+        m2: sysM2,
         effectivePrice,
         isModified,
         adjustedUnitPrice,
@@ -365,21 +363,21 @@ const handleResetApp = () => {
         rawCustomPrice: item.customPrice
       };
     });
-  }, [selectedSystems, services, condition.multiplier, areaM2]);
+  }, [selectedSystems, services, condition.multiplier]);
 
   const calculation = useMemo(() => {
     const grossMaterialLaborCost = activeSystemsDetailed.reduce((acc, sys) => acc + sys.totalCost, 0);
 
     let discountPercentage = 0;
-    if (areaM2 >= 500) {
+    if (totalAreaM2 >= 500) {
       discountPercentage = 0.15;
-    } else if (areaM2 >= 200) {
+    } else if (totalAreaM2 >= 200) {
       discountPercentage = 0.08;
-    } else if (areaM2 >= 100) {
+    } else if (totalAreaM2 >= 100) {
       discountPercentage = 0.04;
     }
 
-    const totalPrepCost = condition.prepCostPerM2 * areaM2;
+    const totalPrepCost = condition.prepCostPerM2 * totalAreaM2;
 
     let totalExtrasCost = 0;
     const breakdownExtras = [];
@@ -389,8 +387,8 @@ const handleResetApp = () => {
         let cost = 0;
         let qty = 0;
         if (ext.useArea) {
-          qty = areaM2;
-          cost = ext.unitPrice * areaM2;
+          qty = totalAreaM2;
+          cost = ext.unitPrice * totalAreaM2;
         } else {
           qty = extraQuantities[ext.id] !== undefined ? extraQuantities[ext.id] : (ext.defaultQty || 1);
           cost = ext.unitPrice * qty;
@@ -413,7 +411,7 @@ const handleResetApp = () => {
     const ivaAmount = includeIva ? subtotalFinal * 0.16 : 0;
     const grandTotal = subtotalFinal + ivaAmount;
 
-    const costPerM2Effective = areaM2 > 0 ? (grandTotal / areaM2) : 0;
+    const costPerM2Effective = totalAreaM2 > 0 ? (grandTotal / totalAreaM2) : 0;
 
     return {
       discountPercentage,
@@ -427,7 +425,7 @@ const handleResetApp = () => {
       grandTotal,
       costPerM2Effective
     };
-  }, [activeSystemsDetailed, areaM2, condition, includeIva, activeExtras, extraQuantities, extrasOptions]);
+  }, [activeSystemsDetailed, totalAreaM2, condition, includeIva, activeExtras, extraQuantities, extrasOptions]);
 
   const toggleExtra = (id) => {
     setActiveExtras(prev => ({ ...prev, [id]: !prev[id] }));
@@ -438,8 +436,22 @@ const handleResetApp = () => {
     setExtraQuantities(prev => ({ ...prev, [id]: num }));
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownloadPDF = () => {
+    const element = document.querySelector('.pdf-container');
+
+    if (window.html2pdf && element) {
+      const opt = {
+        margin:       [8, 10, 8, 10],
+        filename:     `Cotizacion_Enrique_Lara_${new Date().toISOString().slice(0,10)}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
+      };
+
+      html2pdf().set(opt).from(element).save();
+    } else {
+      window.print();
+    }
   };
 
   const handleCopyRichEmail = () => {
@@ -484,7 +496,7 @@ const handleResetApp = () => {
 
   const generateWhatsAppMessage = () => {
     const systemsListText = activeSystemsDetailed
-      .map(sys => `  • ${sys.name}: $${sys.effectivePrice.toLocaleString('es-MX')} MXN / ${sys.unit}`)
+      .map(sys => `  • ${sys.name} (${sys.m2} m²): $${sys.effectivePrice.toLocaleString('es-MX')} MXN / m²`)
       .join('\n');
 
     const text = `*COTIZACIÓN DE PISO INDUSTRIAL*
@@ -498,7 +510,7 @@ __________________________________
 ${systemsListText}
 
 *DETALLES TÉCNICOS:*
-- *Área Estimada:* ${areaM2} m²
+- *Área Total Acumulada:* ${totalAreaM2} m²
 - *Estado de la Superficie:* ${condition.name}
 
 *ADICIONALES INCLUIDOS:*
@@ -522,7 +534,6 @@ _Generado desde Cotizador Enrique Lara._`;
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans antialiased selection:bg-amber-500 selection:text-slate-950 pb-12 w-full">
-      {/* REGLAS CSS ESPECIALES PARA FIX DE IMPRESIÓN Y PDF EN MÓVIL */}
       <style>{`
   @media print {
     @page {
@@ -530,7 +541,6 @@ _Generado desde Cotizador Enrique Lara._`;
       margin: 12mm;
     }
 
-    /* Reset para eliminar el fondo oscuro y cualquier borde/sombra */
     *, *::before, *::after {
       background: transparent !important;
       box-shadow: none !important;
@@ -548,12 +558,10 @@ _Generado desde Cotizador Enrique Lara._`;
       print-color-adjust: exact !important;
     }
 
-    /* Ocultar botones y encabezados de la app web */
     .print\\:hidden, header, button, .fixed {
       display: none !important;
     }
 
-    /* Contenedor de la hoja PDF */
     .pdf-container {
       width: 100% !important;
       max-width: 100% !important;
@@ -576,7 +584,6 @@ _Generado desde Cotizador Enrique Lara._`;
       gap: 16px !important;
     }
 
-    /* REGLA CLAVE: Evita que las firmas o el desglose de totales se rompan a la mitad */
     .pdf-no-break {
       page-break-inside: avoid !important;
       break-inside: avoid !important;
@@ -630,13 +637,13 @@ _Generado desde Cotizador Enrique Lara._`;
               📄 Vista PDF
             </button>
             <button
-        type="button"
-        onClick={handleResetApp}
-        title="Restablecer catálogo maestro"
-        className="p-2 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-slate-800 transition text-xs font-semibold flex items-center gap-1 border border-slate-800 hover:border-amber-500/40"
-      >
-        🔄
-      </button>
+              type="button"
+              onClick={handleResetApp}
+              title="Restablecer catálogo maestro"
+              className="p-2 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-slate-800 transition text-xs font-semibold flex items-center gap-1 border border-slate-800 hover:border-amber-500/40"
+            >
+              🔄
+            </button>
           </div>
         </div>
       </header>
@@ -656,10 +663,10 @@ _Generado desde Cotizador Enrique Lara._`;
                     </div>
                     <div>
                       <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                        📚 Sistemas Epóxicos
+                        📚 Sistemas Epóxicos y Superficies
                       </h2>
                       <p className="text-[11px] sm:text-xs text-amber-400/90 font-medium mt-0.5">
-                        * Selecciona uno o más sistemas
+                        * Asigna m² independientes a cada sistema
                       </p>
                     </div>
                   </div>
@@ -681,86 +688,111 @@ _Generado desde Cotizador Enrique Lara._`;
                     const isSelected = !!selectedItem;
                     const currentPrice = selectedItem && selectedItem.customPrice !== undefined ? selectedItem.customPrice : s.basePrice;
                     const isModified = selectedItem && selectedItem.customPrice !== undefined && Number(selectedItem.customPrice) !== s.basePrice;
+                    const currentM2 = selectedItem ? selectedItem.m2 : 100;
 
                     return (
                       <div
                         key={s.id}
                         onClick={() => toggleSystemSelection(s.id)}
-                        className={`cursor-pointer p-3.5 sm:p-4 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative group ${
+                        className={`cursor-pointer p-3.5 sm:p-4 rounded-xl border transition-all flex flex-col gap-3 relative group ${
                           isSelected
                             ? 'bg-amber-500/10 border-amber-500 shadow-md shadow-amber-500/10 ring-1 ring-amber-500'
                             : 'bg-slate-900/50 border-slate-700/60 hover:border-slate-500 hover:bg-slate-900'
                         }`}
                       >
-                        <div className="flex items-start gap-3 flex-1">
-                          <div className="mt-1">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => {}} 
-                              className="w-4 h-4 sm:w-5 sm:h-5 rounded border-slate-700 bg-slate-950 text-amber-500 focus:ring-amber-500 cursor-pointer"
-                            />
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-start gap-3 flex-1">
+                            <div className="mt-1">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => {}} 
+                                className="w-4 h-4 sm:w-5 sm:h-5 rounded border-slate-700 bg-slate-950 text-amber-500 focus:ring-amber-500 cursor-pointer"
+                              />
+                            </div>
+                            <span className="text-xl sm:text-2xl p-1.5 sm:p-2 bg-slate-800 rounded-lg shrink-0">{s.icon}</span>
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="font-bold text-white text-sm sm:text-base">{s.name}</h3>
+                                {isSelected && (
+                                  <span className="bg-amber-500/20 text-amber-400 text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                                    Incluido
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
+                                {s.description}
+                              </p>
+                            </div>
                           </div>
-                          <span className="text-xl sm:text-2xl p-1.5 sm:p-2 bg-slate-800 rounded-lg shrink-0">{s.icon}</span>
-                          <div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="font-bold text-white text-sm sm:text-base">{s.name}</h3>
-                              {isSelected && (
-                                <span className="bg-amber-500/20 text-amber-400 text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
-                                  Incluido
-                                </span>
+
+                          <div 
+                            className="text-right shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-800 flex items-center sm:flex-col justify-between sm:justify-start sm:items-end gap-1"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] text-slate-400 font-semibold">
+                                Precio Base (${s.unit}):
+                              </span>
+                              {s.id.startsWith('custom_') && (
+                                <button
+                                  onClick={(e) => handleDeleteService(s.id, e)}
+                                  title="Eliminar sistema personalizado"
+                                  className="text-rose-400 hover:text-rose-300 p-0.5 rounded hover:bg-rose-500/20"
+                                >
+                                  🗑️
+                                </button>
                               )}
                             </div>
-                            <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
-                              {s.description}
-                            </p>
+
+                            <div className="flex items-center gap-1">
+                              <span className="text-amber-400 font-bold">$</span>
+                              <input
+                                type="number"
+                                value={currentPrice}
+                                onChange={(e) => {
+                                  if (!isSelected) toggleSystemSelection(s.id);
+                                  handlePriceChange(s.id, e.target.value);
+                                }}
+                                className={`w-20 sm:w-24 bg-slate-950 border rounded-lg px-2 py-1 text-right font-extrabold text-amber-400 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 ${
+                                  isModified ? 'border-amber-400 bg-amber-500/10' : 'border-slate-700'
+                                }`}
+                              />
+                              {isModified && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleResetPrice(s.id)}
+                                  title="Restablecer precio original"
+                                  className="text-slate-400 hover:text-amber-400 p-1"
+                                >
+                                  🔄
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
 
-                        <div 
-                          className="text-right shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-800 flex items-center sm:flex-col justify-between sm:justify-start sm:items-end gap-1"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] text-slate-400 font-semibold">
-                              Precio Base (${s.unit}):
-                            </span>
-                            {s.id.startsWith('custom_') && (
-                              <button
-                                onClick={(e) => handleDeleteService(s.id, e)}
-                                title="Eliminar sistema personalizado"
-                                className="text-rose-400 hover:text-rose-300 p-0.5 rounded hover:bg-rose-500/20"
-                              >
-                                🗑️
-                              </button>
-                            )}
+                        {/* INPUT PARA SUPERFICIE INDEPENDIENTE */}
+                        {isSelected && (
+                          <div 
+                            className="mt-1 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-xs bg-slate-950/40 p-2.5 rounded-lg"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <label className="text-slate-300 font-semibold flex items-center gap-1.5">
+                              📐 Área para este sistema:
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                min="1"
+                                value={currentM2}
+                                onChange={(e) => handleM2Change(s.id, e.target.value)}
+                                className="w-24 bg-slate-950 border border-amber-500/60 rounded-lg px-2.5 py-1 text-right font-black text-amber-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                              />
+                              <span className="text-slate-400 font-bold">m²</span>
+                            </div>
                           </div>
-
-                          <div className="flex items-center gap-1">
-                            <span className="text-amber-400 font-bold">$</span>
-                            <input
-                              type="number"
-                              value={currentPrice}
-                              onChange={(e) => {
-                                if (!isSelected) toggleSystemSelection(s.id);
-                                handlePriceChange(s.id, e.target.value);
-                              }}
-                              className={`w-20 sm:w-24 bg-slate-950 border rounded-lg px-2 py-1 text-right font-extrabold text-amber-400 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 ${
-                                isModified ? 'border-amber-400 bg-amber-500/10' : 'border-slate-700'
-                              }`}
-                            />
-                            {isModified && (
-                              <button
-                                type="button"
-                                onClick={() => handleResetPrice(s.id)}
-                                title="Restablecer precio original"
-                                className="text-slate-400 hover:text-amber-400 p-1"
-                              >
-                                🔄
-                              </button>
-                            )}
-                          </div>
-                        </div>
+                        )}
                       </div>
                     );
                   })}
@@ -772,50 +804,30 @@ _Generado desde Cotizador Enrique Lara._`;
                   <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-sm sm:text-base shrink-0">
                     2
                   </div>
-                  <h2 className="text-base sm:text-lg font-bold text-white">
-                    📐 Área Total y Estado de Concreto
-                  </h2>
+                  <div>
+                    <h2 className="text-base sm:text-lg font-bold text-white">
+                      🛠️ Estado del Concreto y Área Total
+                    </h2>
+                    <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
+                      Área total acumulada: <strong className="text-amber-400">{totalAreaM2} m²</strong>
+                    </p>
+                  </div>
                 </div>
 
                 <div className="bg-slate-900/60 p-4 sm:p-5 rounded-xl border border-slate-700/50 mb-5">
-                  <div className="flex items-center justify-between mb-3 gap-2">
-                    <label className="text-xs sm:text-sm font-semibold text-slate-200">
-                      Superficie a intervenir:
-                    </label>
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="number"
-                        min="10"
-                        max="10000"
-                        value={areaM2}
-                        onChange={(e) => setAreaM2(Math.max(1, Number(e.target.value)))}
-                        className="w-24 sm:w-28 bg-slate-950 border border-amber-500/50 rounded-lg px-2.5 py-1 text-right font-bold text-amber-400 text-base sm:text-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                      />
-                      <span className="text-slate-400 font-semibold text-xs sm:text-sm">m²</span>
-                    </div>
-                  </div>
-
-                  <input
-                    type="range"
-                    min="20"
-                    max="1500"
-                    step="10"
-                    value={areaM2}
-                    onChange={(e) => setAreaM2(Number(e.target.value))}
-                    className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500"
-                  />
-
-                  <div className="flex justify-between text-[10px] sm:text-[11px] text-slate-500 mt-2 font-mono">
-                    <span>20 m²</span>
-                    <span>200 m² (4%)</span>
-                    <span>500 m² (15%)</span>
-                    <span>1500+ m²</span>
+                  <div className="flex items-center justify-between mb-1 gap-2">
+                    <span className="text-xs sm:text-sm font-semibold text-slate-200">
+                      Resumen de Superficie General:
+                    </span>
+                    <span className="text-amber-400 font-bold font-mono text-sm sm:text-base">
+                      {totalAreaM2} m² totales
+                    </span>
                   </div>
 
                   {calculation.discountPercentage > 0 && (
-                    <div className="mt-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-3 py-2 rounded-lg text-xs flex items-center gap-2">
+                    <div className="mt-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-3 py-2 rounded-lg text-xs flex items-center gap-2">
                       📉 <span>
-                        ¡Aplica <strong>{(calculation.discountPercentage * 100).toFixed(0)}% de descuento por volumen</strong>!
+                        ¡Aplica <strong>{(calculation.discountPercentage * 100).toFixed(0)}% de descuento por volumen acumulado</strong>!
                       </span>
                     </div>
                   )}
@@ -823,7 +835,7 @@ _Generado desde Cotizador Enrique Lara._`;
 
                 <div>
                   <label className="block text-xs sm:text-sm font-semibold text-slate-300 mb-3">
-                    Estado Actual del Concreto:
+                    Estado Actual del Concreto (Aplica a toda la superficie):
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     {SURFACE_CONDITIONS.map((cond) => {
@@ -864,7 +876,7 @@ _Generado desde Cotizador Enrique Lara._`;
                       3
                     </div>
                     <h2 className="text-base sm:text-lg font-bold text-white">
-                      🛠️ Complementos
+                      🛠️ Complementos y Adicionales
                     </h2>
                   </div>
 
@@ -1039,7 +1051,7 @@ _Generado desde Cotizador Enrique Lara._`;
                           <div>
                             <span className="font-semibold block text-white text-xs sm:text-sm">{sys.name}</span>
                             <span className="text-[10px] sm:text-[11px] text-slate-400 font-mono">
-                              ${sys.effectivePrice.toLocaleString('es-MX')} MXN / {sys.unit}
+                              {sys.m2} m² × ${sys.effectivePrice.toLocaleString('es-MX')} MXN
                             </span>
                           </div>
                           <span className="font-mono font-medium text-slate-200 text-xs sm:text-sm shrink-0">
@@ -1111,7 +1123,7 @@ _Generado desde Cotizador Enrique Lara._`;
                     </div>
                     
                     <div className="mt-2.5 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 text-[11px] sm:text-xs font-medium border border-slate-700">
-                      ✨ Promedio: <strong className="text-white">${calculation.costPerM2Effective.toFixed(2)} MXN / m²</strong>
+                      ✨ Promedio ({totalAreaM2} m²): <strong className="text-white">${calculation.costPerM2Effective.toFixed(2)} MXN / m²</strong>
                     </div>
                   </div>
                 </div>
@@ -1170,7 +1182,7 @@ _Generado desde Cotizador Enrique Lara._`;
               </div>
             </div>
 
-            {/* CONTENEDOR CON FORMATO DE HOJA A4 CONGELADO */}
+            {/* CONTENEDOR PDF */}
             <div className="pdf-container bg-white text-slate-900 p-6 sm:p-12 rounded-2xl shadow-2xl font-sans border border-slate-200 mx-auto">
               <div className="flex justify-between items-start border-b-2 border-slate-900 pb-5 mb-6 gap-4">
                 <div>
@@ -1197,7 +1209,6 @@ _Generado desde Cotizador Enrique Lara._`;
                 </div>
               </div>
 
-              {/* BLOQUE DE DATOS SIEMPRE EN 2 COLUMNAS */}
               <div className="pdf-grid-2 grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6 text-xs">
                 <div>
                   <h4 className="font-extrabold uppercase text-slate-400 mb-1 text-[10px]">Datos del Cliente:</h4>
@@ -1208,12 +1219,11 @@ _Generado desde Cotizador Enrique Lara._`;
                 </div>
                 <div>
                   <h4 className="font-extrabold uppercase text-slate-400 mb-1 text-[10px]">Especificación Técnica:</h4>
-                  <p className="text-slate-800"><strong>Área a intervenir:</strong> {areaM2} m²</p>
+                  <p className="text-slate-800"><strong>Área total proyecto:</strong> {totalAreaM2} m²</p>
                   <p className="text-slate-800"><strong>Estado actual del suelo:</strong> {condition.name}</p>
                 </div>
               </div>
 
-              {/* TABLA DE CONCEPTOS CON ANCHO FIJO ESTRUCTURADO */}
               <div className="mb-6 overflow-x-auto">
                 <table className="pdf-table w-full text-left text-xs border-collapse">
                   <thead>
@@ -1233,7 +1243,7 @@ _Generado desde Cotizador Enrique Lara._`;
                           <span className="text-slate-500 text-[10px] block leading-tight">{sys.description}</span>
                         </td>
                         <td className="py-2.5 px-1 text-center">{sys.unit}</td>
-                        <td className="py-2.5 px-1 text-right font-mono">{areaM2}</td>
+                        <td className="py-2.5 px-1 text-right font-mono">{sys.m2}</td>
                         <td className="py-2.5 px-1 text-right font-mono">${sys.adjustedUnitPrice.toFixed(2)}</td>
                         <td className="py-2.5 px-1 text-right font-mono font-bold text-slate-900">
                           ${sys.totalCost.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
@@ -1247,7 +1257,7 @@ _Generado desde Cotizador Enrique Lara._`;
                         <span className="text-slate-500 text-[10px] block leading-tight">{condition.name}</span>
                       </td>
                       <td className="py-2.5 px-1 text-center">m²</td>
-                      <td className="py-2.5 px-1 text-right font-mono">{areaM2}</td>
+                      <td className="py-2.5 px-1 text-right font-mono">{totalAreaM2}</td>
                       <td className="py-2.5 px-1 text-right font-mono">${condition.prepCostPerM2.toFixed(2)}</td>
                       <td className="py-2.5 px-1 text-right font-mono font-bold text-slate-900">
                         ${calculation.totalPrepCost.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
@@ -1272,7 +1282,6 @@ _Generado desde Cotizador Enrique Lara._`;
                 </table>
               </div>
 
-              {/* DESGLOSE FINAL A LA DERECHA */}
               <div className="flex justify-end mb-6">
                 <div className="w-full sm:w-1/2 space-y-1.5 text-xs">
                   {calculation.discountAmount > 0 && (
@@ -1307,7 +1316,6 @@ _Generado desde Cotizador Enrique Lara._`;
                 </div>
               )}
 
-              {/* GARANTÍAS */}
               <div className="border-t-2 border-slate-900 pt-4 text-[11px] text-slate-700 space-y-2">
                 <h4 className="font-extrabold text-slate-900 uppercase text-xs">
                   🛡️ Garantías y Requerimientos del Proyecto
@@ -1317,7 +1325,6 @@ _Generado desde Cotizador Enrique Lara._`;
                 <p>• <strong>Condiciones de Pago:</strong> 60% Anticipo para materiales / 40% al finalizar el proyecto.</p>
               </div>
 
-              {/* FIRMAS */}
               <div className="mt-12 pt-6 border-t border-slate-200 flex justify-between items-end text-center text-xs">
                 <div>
                   <div className="w-36 border-b border-slate-400 mb-1 mx-auto"></div>
@@ -1335,7 +1342,7 @@ _Generado desde Cotizador Enrique Lara._`;
         )}
       </main>
 
-      {/* MODAL PLANTILLA DE CORREO ESTILIZADA EN TONOS CLAROS Y ELEGANTES */}
+      {/* MODAL EMAIL */}
       {showEmailModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl relative">
@@ -1352,10 +1359,7 @@ _Generado desde Cotizador Enrique Lara._`;
             </div>
 
             <div className="p-4 sm:p-6 bg-slate-300 text-slate-800 text-xs sm:text-sm">
-              {/* TARJETA TIPO EMAIL ELEGANTE (DISEÑO CLARO CON BORDES DORADOS/ÁMBAR) */}
               <div id="email-card-preview" className="bg-white rounded-xl shadow-xl border border-amber-500/30 overflow-hidden font-sans">
-                
-                {/* ENCABEZADO ELEGANTE CLARO CON LÍNEA DORADA */}
                 <div className="bg-slate-50 text-slate-900 px-6 py-4 flex justify-between items-center border-b-2 border-amber-500">
                   <span className="font-black text-sm uppercase tracking-wider text-slate-900">
                     ENRIQUE <span className="text-amber-600">LARA</span>
@@ -1365,7 +1369,6 @@ _Generado desde Cotizador Enrique Lara._`;
                   </span>
                 </div>
 
-                {/* CUERPO DEL MENSAJE EN FONDOS SUAVES */}
                 <div className="p-6 space-y-4 bg-white">
                   <p className="text-slate-800 font-semibold text-sm">
                     Hola, <span className="text-amber-700 font-bold">{clientInfo.name || 'Estimado Cliente'}</span>:
@@ -1389,7 +1392,6 @@ _Generado desde Cotizador Enrique Lara._`;
                   <p className="text-slate-800 font-bold text-xs pt-1">¡Saludos cordiales!</p>
                 </div>
 
-                {/* PIE DE FIRMA ELEGANTE CLARO CON SUS DATOS REALES */}
                 <div className="bg-slate-50 text-slate-800 p-5 border-t border-slate-200 text-center space-y-1">
                   <h4 className="font-black text-sm text-slate-900 uppercase tracking-wide">
                     Enrique Lara
