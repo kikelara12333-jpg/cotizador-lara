@@ -658,7 +658,7 @@ export default function App() {
           </form>
 
           <div className="border-t border-slate-800/80 pt-4 text-[10px] text-slate-500">
-            Grupo Velanto © {new Date().getFullYear()} • Uso Exclusivo
+            Enrique Lara © {new Date().getFullYear()} • Uso Exclusivo
           </div>
         </div>
       </div>
