@@ -186,7 +186,13 @@ export default function App() {
       return DEFAULT_SERVICES;
     }
   });
-
+const handleResetApp = () => {
+    if (window.confirm('¿Deseas restablecer el catálogo al estado maestro? Se actualizarán los servicios con los cambios más recientes.')) {
+      localStorage.removeItem('el_custom_services');
+      localStorage.removeItem('el_custom_extras');
+      window.location.reload();
+    }
+  };
   const [extrasOptions, setExtrasOptions] = useState(() => {
     try {
       const saved = localStorage.getItem('el_custom_extras');
@@ -623,6 +629,14 @@ _Generado desde Cotizador Enrique Lara._`;
             >
               📄 Vista PDF
             </button>
+            <button
+        type="button"
+        onClick={handleResetApp}
+        title="Restablecer catálogo maestro"
+        className="p-2 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-slate-800 transition text-xs font-semibold flex items-center gap-1 border border-slate-800 hover:border-amber-500/40"
+      >
+        🔄
+      </button>
           </div>
         </div>
       </header>
