@@ -1,5 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 
+// PIN de acceso por defecto para proteger la aplicación
+const DEFAULT_PIN = '1987';
+
 const DEFAULT_SERVICES = [
   {
     id: 'autonivelante',
@@ -150,6 +153,7 @@ const DEFAULT_EXTRAS = [
     description: 'Trazado y pintura epóxica/poliuretano de alta visibilidad en 10 cm de ancho para delimitación de pasillos, pasos peatonales y cajones.',
     unitPrice: 45,
     unit: 'ml',
+    defaultQty: 20,
     useArea: false
   },
   {
@@ -158,6 +162,7 @@ const DEFAULT_EXTRAS = [
     description: 'Apertura de grietas con disco de diamante, limpieza con aire a presión y sellado con elastómero o epóxico semi-rígido.',
     unitPrice: 65,
     unit: 'ml',
+    defaultQty: 10,
     useArea: false
   },
   {
@@ -171,6 +176,14 @@ const DEFAULT_EXTRAS = [
 ];
 
 export default function App() {
+  // ESTADO DE AUTENTICACIÓN
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('el_app_authenticated') === 'true';
+  });
+  const [inputPin, setInputPin] = useState('');
+  const [pinError, setPinError] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+
   const [services, setServices] = useState(() => {
     try {
       const saved = localStorage.getItem('el_custom_services');
@@ -244,6 +257,27 @@ export default function App() {
   });
 
   const [activeTab, setActiveTab] = useState('cotizador');
+
+  // MANEJO DE AUTENTICACIÓN
+  const handlePinSubmit = (e) => {
+    e.preventDefault();
+    if (inputPin === DEFAULT_PIN) {
+      setIsAuthenticated(true);
+      setPinError(false);
+      if (rememberMe) {
+        localStorage.setItem('el_app_authenticated', 'true');
+      }
+    } else {
+      setPinError(true);
+      setInputPin('');
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('el_app_authenticated');
+    setIsAuthenticated(false);
+    setInputPin('');
+  };
 
   const handleResetApp = () => {
     if (window.confirm('¿Deseas restablecer el catálogo al estado maestro? Se actualizarán los servicios y adicionales.')) {
@@ -564,6 +598,74 @@ export default function App() {
     window.open(`https://wa.me/${phoneParam}?text=${encodedText}`, '_blank');
   };
 
+  // SI NO ESTÁ AUTENTICADO: MOSTRAR PANTALLA DE BLOQUEO POR PIN
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 font-sans antialiased">
+        <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl text-center space-y-6">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 font-black text-2xl mx-auto shadow-lg shadow-amber-500/20">
+            EL
+          </div>
+
+          <div>
+            <h1 className="text-xl font-black uppercase text-white tracking-tight">
+              Enrique <span className="text-amber-400">Lara</span>
+            </h1>
+            <p className="text-xs text-slate-400 mt-1">
+              Acceso Privado al Cotizador
+            </p>
+          </div>
+
+          <form onSubmit={handlePinSubmit} className="space-y-4">
+            <div>
+              <input
+                type="password"
+                maxLength={8}
+                value={inputPin}
+                onChange={(e) => {
+                  setInputPin(e.target.value);
+                  setPinError(false);
+                }}
+                placeholder="Ingresa PIN de acceso"
+                autoFocus
+                className={`w-full text-center text-xl font-mono tracking-widest bg-slate-950 border rounded-xl py-3 px-4 text-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all ${
+                  pinError ? 'border-rose-500 bg-rose-500/10' : 'border-slate-700'
+                }`}
+              />
+              {pinError && (
+                <p className="text-xs text-rose-400 font-medium mt-2">
+                  ⚠️ PIN incorrecto. Intenta de nuevo.
+                </p>
+              )}
+            </div>
+
+            <label className="flex items-center justify-center gap-2 cursor-pointer text-xs text-slate-400 select-none">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="rounded border-slate-700 bg-slate-950 text-amber-500 focus:ring-amber-500"
+              />
+              Recordar en este dispositivo
+            </label>
+
+            <button
+              type="submit"
+              className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold py-3 rounded-xl shadow-lg shadow-amber-500/20 text-sm transition-all"
+            >
+              🔓 Ingresar al Cotizador
+            </button>
+          </form>
+
+          <div className="border-t border-slate-800/80 pt-4 text-[10px] text-slate-500">
+            Grupo Velanto © {new Date().getFullYear()} • Uso Exclusivo
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // APLICACIÓN PRINCIPAL
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans antialiased selection:bg-amber-500 selection:text-slate-950 pb-12 w-full">
       <style>{`
@@ -677,6 +779,14 @@ export default function App() {
               className="p-2 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-slate-800 transition text-xs font-semibold flex items-center gap-1 border border-slate-800 hover:border-amber-500/40"
             >
               🔄
+            </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              title="Bloquear Cotizador"
+              className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition text-xs font-semibold flex items-center gap-1 border border-slate-800 hover:border-rose-500/40"
+            >
+              🔒
             </button>
           </div>
         </div>
