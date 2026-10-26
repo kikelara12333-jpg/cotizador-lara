@@ -536,15 +536,10 @@ _Generado desde Sistema de Cotización_`;
   @media print {
     @page {
       size: letter portrait;
-      margin: 12mm;
+      margin: 0; /* Desactiva la URL y encabezados de Safari en iOS */
     }
 
-    *, *::before, *::after {
-      background: transparent !important;
-      box-shadow: none !important;
-      text-shadow: none !important;
-    }
-
+    /* Reset global de impresión */
     html, body {
       background: #ffffff !important;
       background-color: #ffffff !important;
@@ -552,28 +547,33 @@ _Generado desde Sistema de Cotización_`;
       margin: 0 !important;
       padding: 0 !important;
       width: 100% !important;
+      font-size: 12pt !important; /* Fuerza tamaño legible en iOS */
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
 
+    /* Ocultar botones, cabeceras y elementos de UI */
     .print\\:hidden, header, button, .fixed {
       display: none !important;
     }
 
+    /* Contenedor de la hoja A4/Carta con margen interno propio */
     .pdf-container {
       width: 100% !important;
       max-width: 100% !important;
       margin: 0 !important;
-      padding: 0 !important;
+      padding: 15mm 12mm !important; /* Mantiene la hoja centrada sin usar el margen del sistema */
       border: none !important;
       box-shadow: none !important;
       background: #ffffff !important;
-      font-size: 11px !important;
+      font-size: 11pt !important;
+      box-sizing: border-box !important;
     }
 
     .pdf-table {
       width: 100% !important;
       table-layout: fixed !important;
+      font-size: 10pt !important;
     }
 
     .pdf-grid-2 {
