@@ -448,41 +448,31 @@ export default function App() {
     jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
   };
 
-  if (!window.html2pdf) {
-    window.print();
-    return;
-  }
+  if (!window.html2pdf) return;
 
   try {
-    // 1. Generamos el documento PDF en memoria
+    // 1. Generamos el PDF usando el motor en JS
     const pdfWorker = window.html2pdf().set(opt).from(element).toPdf();
     const pdf = await pdfWorker.get('pdf');
-
-    // 2. Convertimos la salida a un Blob ejecutable
     const pdfBlob = pdf.output('blob');
-    const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
-    // 3. Verificamos si el iPhone permite compartir archivos (Web Share API)
+    // 2. Intentamos usar la API nativa de compartir de iOS (Web Share API)
+    const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
     if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
       await navigator.share({
         files: [pdfFile],
         title: 'Cotización Enrique Lara',
-        text: 'Te adjunto la propuesta comercial en PDF.'
+        text: 'Te adjunto la propuesta comercial.'
       });
-    } else {
-      // Alternativa si es un navegador de escritorio (Mac / PC)
-      const blobUrl = URL.createObjectURL(pdfBlob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+      return;
     }
+
+    // 3. Si falla o la PWA bloquea el share, abrimos el PDF en Safari o visor nativo
+    const blobUrl = URL.createObjectURL(pdfBlob);
+    window.location.href = blobUrl; // Forzamos la navegación al archivo dentro de iOS
+
   } catch (error) {
-    console.error('Error generando PDF:', error);
-    window.print();
+    alert('Para descargar el PDF desde la App, usa el botón "Copiar Plantilla" o "WhatsApp", o abre el sitio desde Safari.');
   }
 };
 
