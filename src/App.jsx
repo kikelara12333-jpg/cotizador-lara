@@ -190,7 +190,7 @@ export default function App() {
     } catch(e) {}
   }, [extrasOptions]);
 
-  // Sistemas seleccionados con m2 independientes por sistema
+  // Manejo de sistemas seleccionados con m2 independientes por sistema
   const [selectedSystems, setSelectedSystems] = useState([
     { serviceId: 'autonivelante', m2: 150, customPrice: undefined }
   ]);
@@ -225,13 +225,6 @@ export default function App() {
     phone: '',
     email: '',
     notes: ''
-  });
-
-  // Estado para términos, garantía y condiciones del PDF
-  const [termsInfo, setTermsInfo] = useState({
-    guarantee: '12 meses contra defectos de adherencia y vicios ocultos bajo condiciones normales de uso.',
-    requirements: 'Área libre de obstáculos, energía eléctrica 110/220v y concreto con mínimo 28 días de curado.',
-    paymentTerms: '60% Anticipo para compra de materiales / 40% al finalizar el proyecto.'
   });
 
   const [activeTab, setActiveTab] = useState('cotizador');
@@ -441,23 +434,47 @@ export default function App() {
     setExtraQuantities(prev => ({ ...prev, [id]: num }));
   };
 
-  const handleDownloadPDF = () => {
-    const element = document.querySelector('.pdf-container');
+  const handleDownloadPDF = async () => {
+  const element = document.querySelector('.pdf-container');
+  if (!element) return;
 
-    if (window.html2pdf && element) {
-      const opt = {
-        margin:       [8, 10, 8, 10],
-        filename:     `Cotizacion_Enrique_Lara_${new Date().toISOString().slice(0,10)}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true },
-        jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
-      };
+  const fileName = `Cotizacion_Enrique_Lara_${new Date().toISOString().slice(0, 10)}.pdf`;
 
-      html2pdf().set(opt).from(element).save();
-    } else {
-      window.print();
-    }
+  const opt = {
+    margin:       [8, 10, 8, 10],
+    filename:     fileName,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true },
+    jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
   };
+
+  if (!window.html2pdf) return;
+
+  try {
+    // 1. Generamos el PDF usando el motor en JS
+    const pdfWorker = window.html2pdf().set(opt).from(element).toPdf();
+    const pdf = await pdfWorker.get('pdf');
+    const pdfBlob = pdf.output('blob');
+
+    // 2. Intentamos usar la API nativa de compartir de iOS (Web Share API)
+    const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+    if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+      await navigator.share({
+        files: [pdfFile],
+        title: 'Cotización Enrique Lara',
+        text: 'Te adjunto la propuesta comercial.'
+      });
+      return;
+    }
+
+    // 3. Si falla o la PWA bloquea el share, abrimos el PDF en Safari o visor nativo
+    const blobUrl = URL.createObjectURL(pdfBlob);
+    window.location.href = blobUrl; // Forzamos la navegación al archivo dentro de iOS
+
+  } catch (error) {
+    alert('Para descargar el PDF desde la App, usa el botón "Copiar Plantilla" o "WhatsApp", o abre el sitio desde Safari.');
+  }
+};
 
   const handleCopyRichEmail = () => {
     const emailNode = document.getElementById('email-card-preview');
@@ -501,36 +518,39 @@ export default function App() {
 
   const generateWhatsAppMessage = () => {
     const systemsListText = activeSystemsDetailed
-      .map(sys => `  ▪️ *${sys.name}* (${sys.m2} m²): $${sys.effectivePrice.toLocaleString('es-MX')} MXN / m²`)
+      .map(sys => `  • ${sys.name} (${sys.m2} m²): $${sys.effectivePrice.toLocaleString('es-MX')} MXN / m²`)
       .join('\n');
 
-    const extrasText = calculation.breakdownExtras.length > 0
-      ? calculation.breakdownExtras.map(e => `  ▪️ ${e.name} (${e.qty} ${e.unit}): $${e.total.toLocaleString('es-MX')} MXN`).join('\n')
-      : '  ▪️ Sin adicionales seleccionados';
+    const text = `*COTIZACIÓN DE PISO INDUSTRIAL*
+*Enrique Lara - Pisos Industriales*
+__________________________________
+*Cliente:* ${clientInfo.name || 'Cliente Particular'}
+*Empresa:* ${clientInfo.company || 'N/A'}
+*Contacto:* ${clientInfo.phone || 'No especificado'} | ${clientInfo.email || 'N/A'}
 
-    const text = `Hola, *${clientInfo.name || 'Estimado Cliente'}* 👋\n\n` +
-      `Espero que tengas un excelente día. Te comparto la propuesta comercial para el proyecto *${clientInfo.company || 'Pisos Industriales'}*.\n\n` +
-      `📋 *RESUMEN DE PROPUESTA TÉCNICA*\n` +
-      `__________________________________\n\n` +
-      `🏗️ *SISTEMAS INCLUIDOS:*\n${systemsListText}\n\n` +
-      `📐 *SUPERFICIE GENERAL:* ${totalAreaM2} m²\n` +
-      `🛠️ *ESTADO DE CONCRETO:* ${condition.name}\n\n` +
-      `🧩 *COMPLEMENTOS / EXTRAS:*\n${extrasText}\n\n` +
-      `💰 *DESGLOSE ECONÓMICO:*\n` +
-      `- Subtotal: $${calculation.subtotalFinal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN${calculation.discountPercentage > 0 ? ` _(¡Incluye ${(calculation.discountPercentage * 100).toFixed(0)}% desc. especial!)_` : ''}\n` +
-      `${includeIva ? `- IVA (16%): $${calculation.ivaAmount.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN\n` : ''}` +
-      `👉 *INVERSIÓN TOTAL ESTIMADA:* *$${calculation.grandTotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN*\n` +
-      `✨ _Promedio por m²: $${calculation.costPerM2Effective.toFixed(2)} MXN_\n\n` +
-      `📌 *Notas:* ${clientInfo.notes || 'Sin observaciones.'}\n\n` +
-      `📎 _(Adjunto la cotización formal en PDF a este mensaje para tu expediente.)_\n\n` +
-      `__________________________________\n` +
-      `*ENRIQUE LARA*\n` +
-      `*Pisos Industriales y Recubrimientos*\n` +
-      `📞 +52 55 6220 1871\n` +
-      `✉️ kikelara12333@gmail.com`;
+*SISTEMAS INCLUIDOS EN LA PROPUESTA:*
+${systemsListText}
+
+*DETALLES TÉCNICOS:*
+- *Área Total Acumulada:* ${totalAreaM2} m²
+- *Estado de la Superficie:* ${condition.name}
+
+*ADICIONALES INCLUIDOS:*
+${calculation.breakdownExtras.length > 0 
+  ? calculation.breakdownExtras.map(e => `  - ${e.name} (${e.qty} ${e.unit}): $${e.total.toLocaleString('es-MX')} MXN`).join('\n')
+  : '  - Ningún adicional seleccionado'}
+
+*DESGLOSE ECONÓMICO:*
+- *Subtotal:* $${calculation.subtotalFinal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN ${calculation.discountPercentage > 0 ? `(¡Incluye ${(calculation.discountPercentage*100).toFixed(0)}% desc. especial!)` : ''}
+${includeIva ? `• *IVA (16%):* $${calculation.ivaAmount.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN\n` : ''}• *PRECIO TOTAL ESTIMADO:* $${calculation.grandTotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN
+- *Costo promedio aproximado por m²:* $${calculation.costPerM2Effective.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN
+
+*Notas Adicionales:* ${clientInfo.notes || 'Sin observaciones.'}
+__________________________________
+_Generado desde Sistema de Cotizacion_`;
 
     const encodedText = encodeURIComponent(text);
-    const phoneParam = clientInfo.phone ? clientInfo.phone.replace(/\D/g, '') : '';
+    const phoneParam = clientInfo.phone ? clientInfo.phone.replace(/\D/g,'') : '';
     window.open(`https://wa.me/${phoneParam}?text=${encodedText}`, '_blank');
   };
 
@@ -540,14 +560,13 @@ export default function App() {
   @media print {
     @page {
       size: letter portrait;
-      margin: 10mm;
+      margin: 12mm;
     }
 
     *, *::before, *::after {
-      background: #ffffff !important;
+      background: transparent !important;
       box-shadow: none !important;
       text-shadow: none !important;
-      border-color: #e2e8f0 !important;
     }
 
     html, body {
@@ -571,7 +590,6 @@ export default function App() {
       margin: 0 !important;
       padding: 0 !important;
       border: none !important;
-      outline: none !important;
       box-shadow: none !important;
       background: #ffffff !important;
       font-size: 11px !important;
@@ -1058,50 +1076,6 @@ export default function App() {
                   </div>
                 </div>
               </section>
-
-              {/* SECCIÓN 5: TÉRMINOS, GARANTÍAS Y CONDICIONES DEL PDF */}
-              <section className="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-4 sm:p-6 shadow-lg backdrop-blur-sm">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-sm sm:text-base shrink-0">
-                    5
-                  </div>
-                  <h2 className="text-base sm:text-lg font-bold text-white">
-                    📜 Cláusulas, Garantía y Condiciones
-                  </h2>
-                </div>
-
-                <div className="space-y-3.5 text-xs">
-                  <div>
-                    <label className="block text-slate-400 mb-1 font-semibold">Garantía Ofrecida</label>
-                    <input
-                      type="text"
-                      value={termsInfo.guarantee}
-                      onChange={(e) => setTermsInfo({ ...termsInfo, guarantee: e.target.value })}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-400 mb-1 font-semibold">Requerimientos de Obra</label>
-                    <input
-                      type="text"
-                      value={termsInfo.requirements}
-                      onChange={(e) => setTermsInfo({ ...termsInfo, requirements: e.target.value })}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-400 mb-1 font-semibold">Condiciones de Pago</label>
-                    <input
-                      type="text"
-                      value={termsInfo.paymentTerms}
-                      onChange={(e) => setTermsInfo({ ...termsInfo, paymentTerms: e.target.value })}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500"
-                    />
-                  </div>
-                </div>
-              </section>
             </div>
 
             {/* COLUMNA DERECHA: RESUMEN DE COSTOS */}
@@ -1395,14 +1369,13 @@ export default function App() {
                 </div>
               )}
 
-              {/* VINCULACIÓN DE LAS CLÁUSULAS EDITABLES EN EL PDF */}
               <div className="border-t-2 border-slate-900 pt-4 text-[11px] text-slate-700 space-y-2">
                 <h4 className="font-extrabold text-slate-900 uppercase text-xs">
                   🛡️ Garantías y Requerimientos del Proyecto
                 </h4>
-                <p>• <strong>Garantía:</strong> {termsInfo.guarantee}</p>
-                <p>• <strong>Requerimientos:</strong> {termsInfo.requirements}</p>
-                <p>• <strong>Condiciones de Pago:</strong> {termsInfo.paymentTerms}</p>
+                <p>• <strong>Garantía:</strong> 12 meses contra defectos de adherencia y vicios ocultos bajo condiciones normales de uso.</p>
+                <p>• <strong>Requerimientos:</strong> Área libre de obstáculos, energía eléctrica 110/220v y concreto con mínimo 28 días de curado.</p>
+                <p>• <strong>Condiciones de Pago:</strong> 60% Anticipo para materiales / 40% al finalizar el proyecto.</p>
               </div>
 
               <div className="mt-12 pt-6 border-t border-slate-200 flex justify-between items-end text-center text-xs">
