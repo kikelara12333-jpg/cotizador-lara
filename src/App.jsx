@@ -448,24 +448,27 @@ export default function App() {
     jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
   };
 
-  // Si está corriendo como App en la pantalla de inicio del iPhone
-  if (isStandalone) {
-    if (window.html2pdf) {
-      window.html2pdf().set(opt).from(element).toPdf().output('bloburl').then((pdfUrl) => {
-        // Abre el PDF en una pestaña/ventana del visor de iOS para que puedas guardarlo o compartirlo
-        window.open(pdfUrl, '_blank');
+  if (window.html2pdf) {
+    if (isStandalone) {
+      // En PWA de iPhone genera el Data URI y lo descarga forzando un enlace virtual
+      window.html2pdf().set(opt).from(element).toPdf().get('pdf').then((pdf) => {
+        const blob = pdf.output('blob');
+        const fileURL = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = fileURL;
+        a.download = opt.filename;
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
       }).catch(() => {
         window.print();
       });
     } else {
-      window.print();
+      // En navegador web normal (Mac/Safari/Chrome)
+      window.html2pdf().set(opt).from(element).save();
     }
-    return;
-  }
-
-  // Si está en Safari / Chrome / Mac en navegador normal
-  if (window.html2pdf) {
-    window.html2pdf().set(opt).from(element).save();
   } else {
     window.print();
   }
