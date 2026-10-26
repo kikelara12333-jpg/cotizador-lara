@@ -438,38 +438,50 @@ export default function App() {
   const element = document.querySelector('.pdf-container');
   if (!element) return;
 
-  const filename = `Cotizacion_Enrique_Lara_${new Date().toISOString().slice(0,10)}.pdf`;
+  const fileName = `Cotizacion_Enrique_Lara_${new Date().toISOString().slice(0, 10)}.pdf`;
 
   const opt = {
     margin:       [8, 10, 8, 10],
-    filename:     filename,
+    filename:     fileName,
     image:        { type: 'jpeg', quality: 0.98 },
     html2canvas:  { scale: 2, useCORS: true },
     jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
   };
 
-  if (window.html2pdf) {
-    try {
-      const pdfWorker = window.html2pdf().set(opt).from(element).toPdf();
-      const pdf = await pdfWorker.get('pdf');
-      const blob = pdf.output('blob');
-      const file = new File([blob], filename, { type: 'application/pdf' });
+  if (!window.html2pdf) {
+    window.print();
+    return;
+  }
 
-      // Si el iPhone soporta compartir archivos directamente
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: 'Cotización Enrique Lara',
-          text: 'Te comparto la cotización solicitada.'
-        });
-      } else {
-        // Si no soporta compartir archivo directo, usa la descarga tradicional
-        window.html2pdf().set(opt).from(element).save();
-      }
-    } catch (e) {
-      window.print();
+  try {
+    // 1. Generamos el documento PDF en memoria
+    const pdfWorker = window.html2pdf().set(opt).from(element).toPdf();
+    const pdf = await pdfWorker.get('pdf');
+
+    // 2. Convertimos la salida a un Blob ejecutable
+    const pdfBlob = pdf.output('blob');
+    const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+    // 3. Verificamos si el iPhone permite compartir archivos (Web Share API)
+    if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+      await navigator.share({
+        files: [pdfFile],
+        title: 'Cotización Enrique Lara',
+        text: 'Te adjunto la propuesta comercial en PDF.'
+      });
+    } else {
+      // Alternativa si es un navegador de escritorio (Mac / PC)
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
     }
-  } else {
+  } catch (error) {
+    console.error('Error generando PDF:', error);
     window.print();
   }
 };
