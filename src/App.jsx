@@ -434,40 +434,40 @@ export default function App() {
     setExtraQuantities(prev => ({ ...prev, [id]: num }));
   };
 
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = async () => {
   const element = document.querySelector('.pdf-container');
   if (!element) return;
 
-  const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+  const filename = `Cotizacion_Enrique_Lara_${new Date().toISOString().slice(0,10)}.pdf`;
 
   const opt = {
     margin:       [8, 10, 8, 10],
-    filename:     `Cotizacion_Enrique_Lara_${new Date().toISOString().slice(0,10)}.pdf`,
+    filename:     filename,
     image:        { type: 'jpeg', quality: 0.98 },
     html2canvas:  { scale: 2, useCORS: true },
     jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
   };
 
   if (window.html2pdf) {
-    if (isStandalone) {
-      // En PWA de iPhone genera el Data URI y lo descarga forzando un enlace virtual
-      window.html2pdf().set(opt).from(element).toPdf().get('pdf').then((pdf) => {
-        const blob = pdf.output('blob');
-        const fileURL = URL.createObjectURL(blob);
-        
-        const a = document.createElement('a');
-        a.href = fileURL;
-        a.download = opt.filename;
-        a.target = '_blank';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }).catch(() => {
-        window.print();
-      });
-    } else {
-      // En navegador web normal (Mac/Safari/Chrome)
-      window.html2pdf().set(opt).from(element).save();
+    try {
+      const pdfWorker = window.html2pdf().set(opt).from(element).toPdf();
+      const pdf = await pdfWorker.get('pdf');
+      const blob = pdf.output('blob');
+      const file = new File([blob], filename, { type: 'application/pdf' });
+
+      // Si el iPhone soporta compartir archivos directamente
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Cotización Enrique Lara',
+          text: 'Te comparto la cotización solicitada.'
+        });
+      } else {
+        // Si no soporta compartir archivo directo, usa la descarga tradicional
+        window.html2pdf().set(opt).from(element).save();
+      }
+    } catch (e) {
+      window.print();
     }
   } else {
     window.print();
