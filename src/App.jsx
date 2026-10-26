@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 
 // PIN de acceso por defecto para proteger la aplicación
-const DEFAULT_PIN = '1987';
+const DEFAULT_PIN = '1913';
 
 const DEFAULT_SERVICES = [
   {
