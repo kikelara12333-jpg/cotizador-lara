@@ -523,7 +523,7 @@ ${includeIva ? `• *IVA (16%):* $${calculation.ivaAmount.toLocaleString('es-MX'
 
 *Notas Adicionales:* ${clientInfo.notes || 'Sin observaciones.'}
 __________________________________
-_Generado desde Sistema de Cotización_`;
+_Generado desde Sistema de Cotizacion_`;
 
     const encodedText = encodeURIComponent(text);
     const phoneParam = clientInfo.phone ? clientInfo.phone.replace(/\D/g,'') : '';
@@ -536,10 +536,15 @@ _Generado desde Sistema de Cotización_`;
   @media print {
     @page {
       size: letter portrait;
-      margin: 0; /* Desactiva la URL y encabezados de Safari en iOS */
+      margin: 12mm;
     }
 
-    /* Reset global de impresión */
+    *, *::before, *::after {
+      background: transparent !important;
+      box-shadow: none !important;
+      text-shadow: none !important;
+    }
+
     html, body {
       background: #ffffff !important;
       background-color: #ffffff !important;
@@ -547,33 +552,28 @@ _Generado desde Sistema de Cotización_`;
       margin: 0 !important;
       padding: 0 !important;
       width: 100% !important;
-      font-size: 12pt !important; /* Fuerza tamaño legible en iOS */
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
 
-    /* Ocultar botones, cabeceras y elementos de UI */
     .print\\:hidden, header, button, .fixed {
       display: none !important;
     }
 
-    /* Contenedor de la hoja A4/Carta con margen interno propio */
     .pdf-container {
       width: 100% !important;
       max-width: 100% !important;
       margin: 0 !important;
-      padding: 15mm 12mm !important; /* Mantiene la hoja centrada sin usar el margen del sistema */
+      padding: 0 !important;
       border: none !important;
       box-shadow: none !important;
       background: #ffffff !important;
-      font-size: 11pt !important;
-      box-sizing: border-box !important;
+      font-size: 11px !important;
     }
 
     .pdf-table {
       width: 100% !important;
       table-layout: fixed !important;
-      font-size: 10pt !important;
     }
 
     .pdf-grid-2 {
