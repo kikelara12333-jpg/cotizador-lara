@@ -494,36 +494,39 @@ export default function App() {
 
   const generateWhatsAppMessage = () => {
     const systemsListText = activeSystemsDetailed
-      .map(sys => `  ▪️ *${sys.name}* (${sys.m2} m²): $${sys.effectivePrice.toLocaleString('es-MX')} MXN / m²`)
+      .map(sys => `  • ${sys.name} (${sys.m2} m²): $${sys.effectivePrice.toLocaleString('es-MX')} MXN / m²`)
       .join('\n');
 
-    const extrasText = calculation.breakdownExtras.length > 0
-      ? calculation.breakdownExtras.map(e => `  ▪️ ${e.name} (${e.qty} ${e.unit}): $${e.total.toLocaleString('es-MX')} MXN`).join('\n')
-      : '  ▪️ Sin adicionales seleccionados';
+    const text = `*COTIZACIÓN DE PISO INDUSTRIAL*
+*Enrique Lara - Pisos Industriales*
+__________________________________
+*Cliente:* ${clientInfo.name || 'Cliente Particular'}
+*Empresa:* ${clientInfo.company || 'N/A'}
+*Contacto:* ${clientInfo.phone || 'No especificado'} | ${clientInfo.email || 'N/A'}
 
-    const text = `Hola, *${clientInfo.name || 'Estimado Cliente'}* 👋\n\n` +
-      `Espero que tengas un excelente día. Te comparto la propuesta comercial para el proyecto *${clientInfo.company || 'Pisos Industriales'}*.\n\n` +
-      `📋 *RESUMEN DE PROPUESTA TÉCNICA*\n` +
-      `__________________________________\n\n` +
-      `🏗️ *SISTEMAS INCLUIDOS:*\n${systemsListText}\n\n` +
-      `📐 *SUPERFICIE GENERAL:* ${totalAreaM2} m²\n` +
-      `🛠️ *ESTADO DE CONCRETO:* ${condition.name}\n\n` +
-      `🧩 *COMPLEMENTOS / EXTRAS:*\n${extrasText}\n\n` +
-      `💰 *DESGLOSE ECONÓMICO:*\n` +
-      `- Subtotal: $${calculation.subtotalFinal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN${calculation.discountPercentage > 0 ? ` _(¡Incluye ${(calculation.discountPercentage * 100).toFixed(0)}% desc. especial!)_` : ''}\n` +
-      `${includeIva ? `- IVA (16%): $${calculation.ivaAmount.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN\n` : ''}` +
-      `👉 *INVERSIÓN TOTAL ESTIMADA:* *$${calculation.grandTotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN*\n` +
-      `✨ _Promedio por m²: $${calculation.costPerM2Effective.toFixed(2)} MXN_\n\n` +
-      `📌 *Notas:* ${clientInfo.notes || 'Sin observaciones.'}\n\n` +
-      `📎 _(Adjunto la cotización formal en PDF a este mensaje para tu expediente.)_\n\n` +
-      `__________________________________\n` +
-      `*ENRIQUE LARA*\n` +
-      `*Pisos Industriales y Recubrimientos*\n` +
-      `📞 +52 55 6220 1871\n` +
-      `✉️ kikelara12333@gmail.com`;
+*SISTEMAS INCLUIDOS EN LA PROPUESTA:*
+${systemsListText}
+
+*DETALLES TÉCNICOS:*
+- *Área Total Acumulada:* ${totalAreaM2} m²
+- *Estado de la Superficie:* ${condition.name}
+
+*ADICIONALES INCLUIDOS:*
+${calculation.breakdownExtras.length > 0 
+  ? calculation.breakdownExtras.map(e => `  - ${e.name} (${e.qty} ${e.unit}): $${e.total.toLocaleString('es-MX')} MXN`).join('\n')
+  : '  - Ningún adicional seleccionado'}
+
+*DESGLOSE ECONÓMICO:*
+- *Subtotal:* $${calculation.subtotalFinal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN ${calculation.discountPercentage > 0 ? `(¡Incluye ${(calculation.discountPercentage*100).toFixed(0)}% desc. especial!)` : ''}
+${includeIva ? `• *IVA (16%):* $${calculation.ivaAmount.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN\n` : ''}• *PRECIO TOTAL ESTIMADO:* $${calculation.grandTotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN
+- *Costo promedio aproximado por m²:* $${calculation.costPerM2Effective.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN
+
+*Notas Adicionales:* ${clientInfo.notes || 'Sin observaciones.'}
+__________________________________
+_Generado desde Sistema de Cotización_`;
 
     const encodedText = encodeURIComponent(text);
-    const phoneParam = clientInfo.phone ? clientInfo.phone.replace(/\D/g, '') : '';
+    const phoneParam = clientInfo.phone ? clientInfo.phone.replace(/\D/g,'') : '';
     window.open(`https://wa.me/${phoneParam}?text=${encodedText}`, '_blank');
   };
 
@@ -533,7 +536,7 @@ export default function App() {
   @media print {
     @page {
       size: letter portrait;
-      margin: 0 !important; /* 👈 Elimina encabezados, URL, fecha y pie de página de iOS */
+      margin: 12mm;
     }
 
     *, *::before, *::after {
@@ -547,7 +550,7 @@ export default function App() {
       background-color: #ffffff !important;
       color: #0f172a !important;
       margin: 0 !important;
-      padding: 12mm 10mm !important; /* 👈 Le da el margen limpio a la hoja sin usar el de Safari */
+      padding: 0 !important;
       width: 100% !important;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
@@ -585,6 +588,7 @@ export default function App() {
     }
   }
 `}</style>
+
       {/* HEADER RESPONSIVO */}
       <header className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-slate-800 shadow-xl print:hidden w-full">
         <div className="max-w-6xl mx-auto px-4 py-3 sm:py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
