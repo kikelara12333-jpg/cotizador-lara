@@ -190,13 +190,17 @@ export default function App() {
     } catch(e) {}
   }, [extrasOptions]);
 
-  // Manejo de sistemas seleccionados con m2 individuales por sistema
+  // Manejo de sistemas seleccionados con m2 independientes por sistema
   const [selectedSystems, setSelectedSystems] = useState([
     { serviceId: 'autonivelante', m2: 150, customPrice: undefined }
   ]);
 
   const [surfaceConditionId, setSurfaceConditionId] = useState('regular');
   const [includeIva, setIncludeIva] = useState(true);
+
+  // Estados para control manual de descuento
+  const [applyDiscount, setApplyDiscount] = useState(false);
+  const [customDiscountPercent, setCustomDiscountPercent] = useState(5);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -368,14 +372,8 @@ export default function App() {
   const calculation = useMemo(() => {
     const grossMaterialLaborCost = activeSystemsDetailed.reduce((acc, sys) => acc + sys.totalCost, 0);
 
-    let discountPercentage = 0;
-    if (totalAreaM2 >= 500) {
-      discountPercentage = 0.15;
-    } else if (totalAreaM2 >= 200) {
-      discountPercentage = 0.08;
-    } else if (totalAreaM2 >= 100) {
-      discountPercentage = 0.04;
-    }
+    // Lógica manual de porcentaje de descuento
+    const discountPercentage = applyDiscount ? (customDiscountPercent / 100) : 0;
 
     const totalPrepCost = condition.prepCostPerM2 * totalAreaM2;
 
@@ -425,7 +423,7 @@ export default function App() {
       grandTotal,
       costPerM2Effective
     };
-  }, [activeSystemsDetailed, totalAreaM2, condition, includeIva, activeExtras, extraQuantities, extrasOptions]);
+  }, [activeSystemsDetailed, totalAreaM2, condition, includeIva, activeExtras, extraQuantities, extrasOptions, applyDiscount, customDiscountPercent]);
 
   const toggleExtra = (id) => {
     setActiveExtras(prev => ({ ...prev, [id]: !prev[id] }));
@@ -519,7 +517,7 @@ ${calculation.breakdownExtras.length > 0
   : '  - Ningún adicional seleccionado'}
 
 *DESGLOSE ECONÓMICO:*
-- *Subtotal:* $${calculation.subtotalFinal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN ${calculation.discountPercentage > 0 ? `(¡Incluye ${(calculation.discountPercentage*100).toFixed(0)}% desc. volumen!)` : ''}
+- *Subtotal:* $${calculation.subtotalFinal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN ${calculation.discountPercentage > 0 ? `(¡Incluye ${(calculation.discountPercentage*100).toFixed(0)}% desc. especial!)` : ''}
 ${includeIva ? `• *IVA (16%):* $${calculation.ivaAmount.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN\n` : ''}• *PRECIO TOTAL ESTIMADO:* $${calculation.grandTotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN
 - *Costo promedio aproximado por m²:* $${calculation.costPerM2Effective.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN
 
@@ -806,7 +804,7 @@ _Generado desde Cotizador Enrique Lara._`;
                   </div>
                   <div>
                     <h2 className="text-base sm:text-lg font-bold text-white">
-                      🛠️ Estado del Concreto y Área Total
+                      🛠️ Estado del Concreto y Descuentos
                     </h2>
                     <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
                       Área total acumulada: <strong className="text-amber-400">{totalAreaM2} m²</strong>
@@ -814,21 +812,52 @@ _Generado desde Cotizador Enrique Lara._`;
                   </div>
                 </div>
 
-                <div className="bg-slate-900/60 p-4 sm:p-5 rounded-xl border border-slate-700/50 mb-5">
-                  <div className="flex items-center justify-between mb-1 gap-2">
-                    <span className="text-xs sm:text-sm font-semibold text-slate-200">
-                      Resumen de Superficie General:
-                    </span>
-                    <span className="text-amber-400 font-bold font-mono text-sm sm:text-base">
-                      {totalAreaM2} m² totales
-                    </span>
+                {/* CONTROL MANUAL DE DESCUENTO POR VOLUMEN / NEGOCIACIÓN */}
+                <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-700/80 mb-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={applyDiscount}
+                        onChange={(e) => setApplyDiscount(e.target.checked)}
+                        className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-amber-500 focus:ring-amber-500 cursor-pointer"
+                      />
+                      <span className="text-xs sm:text-sm font-bold text-slate-200">
+                        🏷️ Aplicar Descuento Especial / Volumen
+                      </span>
+                    </label>
+
+                    {applyDiscount && (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          min="1"
+                          max="50"
+                          value={customDiscountPercent}
+                          onChange={(e) => setCustomDiscountPercent(Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
+                          className="w-16 bg-slate-950 border border-emerald-500/60 rounded-lg px-2 py-1 text-right font-bold text-emerald-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                        <span className="text-emerald-400 font-bold text-sm">%</span>
+                      </div>
+                    )}
                   </div>
 
-                  {calculation.discountPercentage > 0 && (
-                    <div className="mt-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-3 py-2 rounded-lg text-xs flex items-center gap-2">
-                      📉 <span>
-                        ¡Aplica <strong>{(calculation.discountPercentage * 100).toFixed(0)}% de descuento por volumen acumulado</strong>!
-                      </span>
+                  {applyDiscount && (
+                    <div className="flex flex-wrap gap-1.5 pt-1 border-t border-slate-800">
+                      {[5, 8, 10, 12, 15].map((pct) => (
+                        <button
+                          key={pct}
+                          type="button"
+                          onClick={() => setCustomDiscountPercent(pct)}
+                          className={`px-2.5 py-1 rounded-md text-xs font-semibold border transition ${
+                            customDiscountPercent === pct
+                              ? 'bg-emerald-500 text-slate-950 border-emerald-400 font-bold'
+                              : 'bg-slate-800 text-slate-300 border-slate-700 hover:border-emerald-500/50'
+                          }`}
+                        >
+                          {pct}%
+                        </button>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -1080,7 +1109,7 @@ _Generado desde Cotizador Enrique Lara._`;
 
                   {calculation.discountAmount > 0 && (
                     <div className="flex justify-between items-center text-emerald-400 font-medium text-xs sm:text-sm">
-                      <span>Descuento Volumen ({(calculation.discountPercentage * 100).toFixed(0)}%):</span>
+                      <span>Descuento Especial ({(calculation.discountPercentage * 100).toFixed(0)}%):</span>
                       <span className="font-mono">
                         -${calculation.discountAmount.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                       </span>
@@ -1286,7 +1315,7 @@ _Generado desde Cotizador Enrique Lara._`;
                 <div className="w-full sm:w-1/2 space-y-1.5 text-xs">
                   {calculation.discountAmount > 0 && (
                     <div className="flex justify-between text-emerald-700 font-semibold">
-                      <span>Descuento por Volumen:</span>
+                      <span>Descuento Especial ({(calculation.discountPercentage * 100).toFixed(0)}%):</span>
                       <span className="font-mono">-${calculation.discountAmount.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
                     </div>
                   )}
