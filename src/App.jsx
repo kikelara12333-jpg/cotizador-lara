@@ -436,28 +436,36 @@ export default function App() {
 
   const handleDownloadPDF = () => {
   const element = document.querySelector('.pdf-container');
+  if (!element) return;
 
-  // Detecta si la app se está ejecutando guardada en Inicio (PWA) o en iOS
   const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-  // Si está en modo App (PWA en iPhone), usa el visor nativo/impresión para evitar el bloqueo de iOS
-  if ((isStandalone || isIOS) && element) {
-    window.print();
+  const opt = {
+    margin:       [8, 10, 8, 10],
+    filename:     `Cotizacion_Enrique_Lara_${new Date().toISOString().slice(0,10)}.pdf`,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true },
+    jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
+  };
+
+  // Si está corriendo como App en la pantalla de inicio del iPhone
+  if (isStandalone) {
+    if (window.html2pdf) {
+      window.html2pdf().set(opt).from(element).toPdf().output('bloburl').then((pdfUrl) => {
+        // Abre el PDF en una pestaña/ventana del visor de iOS para que puedas guardarlo o compartirlo
+        window.open(pdfUrl, '_blank');
+      }).catch(() => {
+        window.print();
+      });
+    } else {
+      window.print();
+    }
     return;
   }
 
-  // Si está en Safari/Mac/Chrome web normal, usa html2pdf para descarga directa
-  if (window.html2pdf && element) {
-    const opt = {
-      margin:       [8, 10, 8, 10],
-      filename:     `Cotizacion_Enrique_Lara_${new Date().toISOString().slice(0,10)}.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true },
-      jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
-    };
-
-    html2pdf().set(opt).from(element).save();
+  // Si está en Safari / Chrome / Mac en navegador normal
+  if (window.html2pdf) {
+    window.html2pdf().set(opt).from(element).save();
   } else {
     window.print();
   }
