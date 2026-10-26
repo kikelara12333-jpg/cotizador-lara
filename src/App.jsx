@@ -4,6 +4,7 @@ const DEFAULT_SERVICES = [
   {
     id: 'autonivelante',
     name: 'Sistema Epóxico Autonivelante',
+    category: 'Industriales',
     description: 'Acabado liso, higiénico, brillante y de alta resistencia química e impacto. Ideal para laboratorios, hospitales e industria limpia.',
     basePrice: 350,
     unit: 'm²',
@@ -12,6 +13,7 @@ const DEFAULT_SERVICES = [
   {
     id: 'cascara_naranja',
     name: 'Acabado Cáscara de Naranja',
+    category: 'Protección',
     description: 'Textura antideslizante de alta durabilidad para tráfico peatonal y montacargas ligero. Excelente relación costo-beneficio.',
     basePrice: 280,
     unit: 'm²',
@@ -20,6 +22,7 @@ const DEFAULT_SERVICES = [
   {
     id: 'flakes-hojuela',
     name: 'Sistema Flakes / Hojuela',
+    category: 'Decorativos',
     description: 'Acabado decorativo y de alta durabilidad con hojuelas de vinilo encapsuladas en resina transparente. Ideal para cocheras, salas de exhibición, oficinas y comercios.',
     basePrice: 380,
     unit: 'm²',
@@ -28,6 +31,7 @@ const DEFAULT_SERVICES = [
   {
     id: 'cuarzo-sembrado',
     name: 'Sistema Epóxico de Cuarzo',
+    category: 'Decorativos',
     description: 'Matriz epóxica saturada con arenas de cuarzo pigmentadas. Ofrece altísima resistencia al desgaste, propiedades antideslizantes e impermeabilidad total.',
     basePrice: 420,
     unit: 'm²',
@@ -36,6 +40,7 @@ const DEFAULT_SERVICES = [
   {
     id: 'terrazo-epoxico',
     name: 'Sistema Terrazo Epóxico',
+    category: 'Decorativos',
     description: 'Acabado arquitectónico de lujo compuesto por resina epóxica y agregados de mármol o granito, devastado y pulido a espejo. Ciclo de vida superior a 30 años.',
     basePrice: 1200,
     unit: 'm²',
@@ -44,6 +49,7 @@ const DEFAULT_SERVICES = [
   {
     id: 'uretano-cementicio',
     name: 'Mortero Uretano Cementicio',
+    category: 'Industriales',
     description: 'Diseñado para condiciones extremas: soporte de choque térmico (-40 °C a 120 °C), humedad severa, químicos agresivos y tráfico pesado constante. Indispensable en industria alimentaria y química.',
     basePrice: 650,
     unit: 'm²',
@@ -52,6 +58,7 @@ const DEFAULT_SERVICES = [
   {
     id: 'pintura-poliuretano',
     name: 'Pintura / Acabado en Poliuretano',
+    category: 'Protección',
     description: 'Recubrimiento protector con alta estabilidad a los rayos UV (no se amarillea a la intemperie) y excelente resistencia al rayado y a solventes.',
     basePrice: 220,
     unit: 'm²',
@@ -60,6 +67,7 @@ const DEFAULT_SERVICES = [
   {
     id: 'antiderrapante-texturizado',
     name: 'Sistema Epóxico Antiderrapante',
+    category: 'Protección',
     description: 'Acabado texturizado con siembra de óxido de aluminio o sílice para maximizar la tracción en rampas, pasillos industriales, zonas húmedas y áreas de maniobra.',
     basePrice: 280,
     unit: 'm²',
@@ -68,6 +76,7 @@ const DEFAULT_SERVICES = [
   {
     id: 'mortero-epoxico',
     name: 'Mortero Epóxico de Alta Resistencia',
+    category: 'Industriales',
     description: 'Capa gruesa (3 mm a 6 mm) para nivelar o reparar pisos de concreto severamente dañados antes de la capa final, soportando altas cargas puntuales e impacto mecánico.',
     basePrice: 480,
     unit: 'm²',
@@ -76,6 +85,7 @@ const DEFAULT_SERVICES = [
   {
     id: 'sello_epoxico',
     name: 'Sello Epóxico',
+    category: 'Protección',
     description: 'Recubrimiento delgado para protección contra polvo, abrasión ligera y sellado de pisos de concreto existentes.',
     basePrice: 180,
     unit: 'm²',
@@ -84,6 +94,7 @@ const DEFAULT_SERVICES = [
   {
     id: 'restauracion_fisuras',
     name: 'Restauración y Reparación de Fisuras',
+    category: 'Protección',
     description: 'Tratamiento de juntas de dilatación y renivelación de grietas estructurales con resina epóxica flexible.',
     basePrice: 120,
     unit: 'ml',
@@ -138,7 +149,7 @@ const DEFAULT_EXTRAS = [
     name: 'Líneas de Delimitación y Señalética (10 cm)',
     description: 'Trazado y pintura epóxica/poliuretano de alta visibilidad en 10 cm de ancho para delimitación de pasillos, pasos peatonales y cajones.',
     unitPrice: 45,
-    unit: 'm',
+    unit: 'ml',
     useArea: false
   },
   {
@@ -146,7 +157,7 @@ const DEFAULT_EXTRAS = [
     name: 'Sellado y Cursado de Grietas / Juntas',
     description: 'Apertura de grietas con disco de diamante, limpieza con aire a presión y sellado con elastómero o epóxico semi-rígido.',
     unitPrice: 65,
-    unit: 'm',
+    unit: 'ml',
     useArea: false
   },
   {
@@ -190,10 +201,14 @@ export default function App() {
     } catch(e) {}
   }, [extrasOptions]);
 
-  // Manejo de sistemas seleccionados con m2 independientes por sistema
-  const [selectedSystems, setSelectedSystems] = useState([
-    { serviceId: 'autonivelante', m2: 150, customPrice: undefined }
-  ]);
+  // Estado del filtro por categoría
+  const [categoryFilter, setCategoryFilter] = useState('Todos');
+
+  // Inicializa la app sin ningún sistema seleccionado por defecto
+  const [selectedSystems, setSelectedSystems] = useState([]);
+
+  // Estado para precios personalizados de complementos
+  const [customExtraPrices, setCustomExtraPrices] = useState({});
 
   const [surfaceConditionId, setSurfaceConditionId] = useState('regular');
   const [includeIva, setIncludeIva] = useState(true);
@@ -209,6 +224,7 @@ export default function App() {
   
   const [newItem, setNewItem] = useState({
     name: '',
+    category: 'Industriales',
     description: '',
     price: '',
     unit: 'm²',
@@ -233,6 +249,7 @@ export default function App() {
     if (window.confirm('¿Deseas restablecer el catálogo al estado maestro? Se actualizarán los servicios y adicionales.')) {
       localStorage.removeItem('el_custom_services');
       localStorage.removeItem('el_custom_extras');
+      setCustomExtraPrices({});
       window.location.reload();
     }
   };
@@ -241,7 +258,6 @@ export default function App() {
     setSelectedSystems(prev => {
       const exists = prev.some(item => item.serviceId === serviceId);
       if (exists) {
-        if (prev.length === 1) return prev;
         return prev.filter(item => item.serviceId !== serviceId);
       } else {
         return [...prev, { serviceId, m2: 100, customPrice: undefined }];
@@ -278,6 +294,18 @@ export default function App() {
     );
   };
 
+  const handlePriceExtraChange = (extraId, newPrice) => {
+    setCustomExtraPrices(prev => ({ ...prev, [extraId]: newPrice }));
+  };
+
+  const handleResetExtraPrice = (extraId) => {
+    setCustomExtraPrices(prev => {
+      const copy = { ...prev };
+      delete copy[extraId];
+      return copy;
+    });
+  };
+
   const handleAddNewItem = (e) => {
     e.preventDefault();
     if (!newItem.name || !newItem.price) return;
@@ -289,6 +317,7 @@ export default function App() {
       const createdSystem = {
         id,
         name: newItem.name,
+        category: newItem.category || 'Industriales',
         description: newItem.description || 'Sistema personalizado',
         basePrice: priceNum,
         unit: newItem.unit || 'm²',
@@ -310,6 +339,7 @@ export default function App() {
 
     setNewItem({
       name: '',
+      category: 'Industriales',
       description: '',
       price: '',
       unit: 'm²',
@@ -321,7 +351,6 @@ export default function App() {
 
   const handleDeleteService = (id, e) => {
     e.stopPropagation();
-    if (services.length <= 1) return;
     setServices(prev => prev.filter(s => s.id !== id));
     setSelectedSystems(prev => prev.filter(s => s.serviceId !== id));
   };
@@ -340,7 +369,11 @@ export default function App() {
     return SURFACE_CONDITIONS.find(c => c.id === surfaceConditionId) || SURFACE_CONDITIONS[0];
   }, [surfaceConditionId]);
 
-  // Área total suma de todos los sistemas seleccionados
+  const filteredServices = useMemo(() => {
+    if (categoryFilter === 'Todos') return services;
+    return services.filter(s => s.category === categoryFilter);
+  }, [services, categoryFilter]);
+
   const totalAreaM2 = useMemo(() => {
     return selectedSystems.reduce((acc, sys) => acc + (Number(sys.m2) || 0), 0);
   }, [selectedSystems]);
@@ -372,9 +405,7 @@ export default function App() {
   const calculation = useMemo(() => {
     const grossMaterialLaborCost = activeSystemsDetailed.reduce((acc, sys) => acc + sys.totalCost, 0);
 
-    // Lógica manual de porcentaje de descuento
     const discountPercentage = applyDiscount ? (customDiscountPercent / 100) : 0;
-
     const totalPrepCost = condition.prepCostPerM2 * totalAreaM2;
 
     let totalExtrasCost = 0;
@@ -382,21 +413,27 @@ export default function App() {
 
     extrasOptions.forEach(ext => {
       if (activeExtras[ext.id]) {
+        const customP = customExtraPrices[ext.id];
+        const effectiveUnitPrice = (customP !== undefined && customP !== '')
+          ? Number(customP)
+          : ext.unitPrice;
+
         let cost = 0;
         let qty = 0;
         if (ext.useArea) {
           qty = totalAreaM2;
-          cost = ext.unitPrice * totalAreaM2;
+          cost = effectiveUnitPrice * totalAreaM2;
         } else {
           qty = extraQuantities[ext.id] !== undefined ? extraQuantities[ext.id] : (ext.defaultQty || 1);
-          cost = ext.unitPrice * qty;
+          cost = effectiveUnitPrice * qty;
         }
         totalExtrasCost += cost;
         breakdownExtras.push({
+          id: ext.id,
           name: ext.name,
           qty,
           unit: ext.unit || 'm²',
-          unitPrice: ext.unitPrice,
+          unitPrice: effectiveUnitPrice,
           total: cost
         });
       }
@@ -423,7 +460,7 @@ export default function App() {
       grandTotal,
       costPerM2Effective
     };
-  }, [activeSystemsDetailed, totalAreaM2, condition, includeIva, activeExtras, extraQuantities, extrasOptions, applyDiscount, customDiscountPercent]);
+  }, [activeSystemsDetailed, totalAreaM2, condition, includeIva, activeExtras, extraQuantities, extrasOptions, applyDiscount, customDiscountPercent, customExtraPrices]);
 
   const toggleExtra = (id) => {
     setActiveExtras(prev => ({ ...prev, [id]: !prev[id] }));
@@ -434,47 +471,23 @@ export default function App() {
     setExtraQuantities(prev => ({ ...prev, [id]: num }));
   };
 
-  const handleDownloadPDF = async () => {
-  const element = document.querySelector('.pdf-container');
-  if (!element) return;
+  const handleDownloadPDF = () => {
+    const element = document.querySelector('.pdf-container');
 
-  const fileName = `Cotizacion_Enrique_Lara_${new Date().toISOString().slice(0, 10)}.pdf`;
+    if (window.html2pdf && element) {
+      const opt = {
+        margin:       [8, 10, 8, 10],
+        filename:     `Cotizacion_Enrique_Lara_${new Date().toISOString().slice(0,10)}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
+      };
 
-  const opt = {
-    margin:       [8, 10, 8, 10],
-    filename:     fileName,
-    image:        { type: 'jpeg', quality: 0.98 },
-    html2canvas:  { scale: 2, useCORS: true },
-    jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
-  };
-
-  if (!window.html2pdf) return;
-
-  try {
-    // 1. Generamos el PDF usando el motor en JS
-    const pdfWorker = window.html2pdf().set(opt).from(element).toPdf();
-    const pdf = await pdfWorker.get('pdf');
-    const pdfBlob = pdf.output('blob');
-
-    // 2. Intentamos usar la API nativa de compartir de iOS (Web Share API)
-    const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
-    if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-      await navigator.share({
-        files: [pdfFile],
-        title: 'Cotización Enrique Lara',
-        text: 'Te adjunto la propuesta comercial.'
-      });
-      return;
+      html2pdf().set(opt).from(element).save();
+    } else {
+      window.print();
     }
-
-    // 3. Si falla o la PWA bloquea el share, abrimos el PDF en Safari o visor nativo
-    const blobUrl = URL.createObjectURL(pdfBlob);
-    window.location.href = blobUrl; // Forzamos la navegación al archivo dentro de iOS
-
-  } catch (error) {
-    alert('Para descargar el PDF desde la App, usa el botón "Copiar Plantilla" o "WhatsApp", o abre el sitio desde Safari.');
-  }
-};
+  };
 
   const handleCopyRichEmail = () => {
     const emailNode = document.getElementById('email-card-preview');
@@ -517,40 +530,37 @@ export default function App() {
   };
 
   const generateWhatsAppMessage = () => {
-    const systemsListText = activeSystemsDetailed
-      .map(sys => `  • ${sys.name} (${sys.m2} m²): $${sys.effectivePrice.toLocaleString('es-MX')} MXN / m²`)
-      .join('\n');
+    const systemsListText = activeSystemsDetailed.length > 0
+      ? activeSystemsDetailed.map(sys => `  ▪️ *${sys.name}* (${sys.m2} m²): $${sys.effectivePrice.toLocaleString('es-MX')} MXN / m²`).join('\n')
+      : '  ▪️ Sin sistemas seleccionados';
 
-    const text = `*COTIZACIÓN DE PISO INDUSTRIAL*
-*Enrique Lara - Pisos Industriales*
-__________________________________
-*Cliente:* ${clientInfo.name || 'Cliente Particular'}
-*Empresa:* ${clientInfo.company || 'N/A'}
-*Contacto:* ${clientInfo.phone || 'No especificado'} | ${clientInfo.email || 'N/A'}
+    const extrasText = calculation.breakdownExtras.length > 0
+      ? calculation.breakdownExtras.map(e => `  ▪️ ${e.name} (${e.qty} ${e.unit}): $${e.total.toLocaleString('es-MX')} MXN`).join('\n')
+      : '  ▪️ Sin adicionales seleccionados';
 
-*SISTEMAS INCLUIDOS EN LA PROPUESTA:*
-${systemsListText}
-
-*DETALLES TÉCNICOS:*
-- *Área Total Acumulada:* ${totalAreaM2} m²
-- *Estado de la Superficie:* ${condition.name}
-
-*ADICIONALES INCLUIDOS:*
-${calculation.breakdownExtras.length > 0 
-  ? calculation.breakdownExtras.map(e => `  - ${e.name} (${e.qty} ${e.unit}): $${e.total.toLocaleString('es-MX')} MXN`).join('\n')
-  : '  - Ningún adicional seleccionado'}
-
-*DESGLOSE ECONÓMICO:*
-- *Subtotal:* $${calculation.subtotalFinal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN ${calculation.discountPercentage > 0 ? `(¡Incluye ${(calculation.discountPercentage*100).toFixed(0)}% desc. especial!)` : ''}
-${includeIva ? `• *IVA (16%):* $${calculation.ivaAmount.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN\n` : ''}• *PRECIO TOTAL ESTIMADO:* $${calculation.grandTotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN
-- *Costo promedio aproximado por m²:* $${calculation.costPerM2Effective.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN
-
-*Notas Adicionales:* ${clientInfo.notes || 'Sin observaciones.'}
-__________________________________
-_Generado desde Sistema de Cotizacion_`;
+    const text = `Hola, *${clientInfo.name || 'Estimado Cliente'}* 👋\n\n` +
+      `Espero que tengas un excelente día. Te comparto la propuesta comercial para el proyecto *${clientInfo.company || 'Pisos Industriales'}*.\n\n` +
+      `📋 *RESUMEN DE PROPUESTA TÉCNICA*\n` +
+      `__________________________________\n\n` +
+      `🏗️ *SISTEMAS INCLUIDOS:*\n${systemsListText}\n\n` +
+      `📐 *SUPERFICIE GENERAL:* ${totalAreaM2} m²\n` +
+      `🛠️ *ESTADO DE CONCRETO:* ${condition.name}\n\n` +
+      `🧩 *COMPLEMENTOS / EXTRAS:*\n${extrasText}\n\n` +
+      `💰 *DESGLOSE ECONÓMICO:*\n` +
+      `- Subtotal: $${calculation.subtotalFinal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN${calculation.discountPercentage > 0 ? ` _(¡Incluye ${(calculation.discountPercentage * 100).toFixed(0)}% desc. especial!)_` : ''}\n` +
+      `${includeIva ? `- IVA (16%): $${calculation.ivaAmount.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN\n` : ''}` +
+      `👉 *INVERSIÓN TOTAL ESTIMADA:* *$${calculation.grandTotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN*\n` +
+      `✨ _Promedio por m²: $${calculation.costPerM2Effective.toFixed(2)} MXN_\n\n` +
+      `📌 *Notas:* ${clientInfo.notes || 'Sin observaciones.'}\n\n` +
+      `📎 _(Adjunto la cotización formal en PDF a este mensaje para tu expediente.)_\n\n` +
+      `__________________________________\n` +
+      `*ENRIQUE LARA*\n` +
+      `*Pisos Industriales y Recubrimientos*\n` +
+      `📞 +52 55 6220 1871\n` +
+      `✉️ kikelara12333@gmail.com`;
 
     const encodedText = encodeURIComponent(text);
-    const phoneParam = clientInfo.phone ? clientInfo.phone.replace(/\D/g,'') : '';
+    const phoneParam = clientInfo.phone ? clientInfo.phone.replace(/\D/g, '') : '';
     window.open(`https://wa.me/${phoneParam}?text=${encodedText}`, '_blank');
   };
 
@@ -560,13 +570,14 @@ _Generado desde Sistema de Cotizacion_`;
   @media print {
     @page {
       size: letter portrait;
-      margin: 12mm;
+      margin: 10mm;
     }
 
     *, *::before, *::after {
-      background: transparent !important;
+      background: #ffffff !important;
       box-shadow: none !important;
       text-shadow: none !important;
+      border-color: #e2e8f0 !important;
     }
 
     html, body {
@@ -590,6 +601,7 @@ _Generado desde Sistema de Cotizacion_`;
       margin: 0 !important;
       padding: 0 !important;
       border: none !important;
+      outline: none !important;
       box-shadow: none !important;
       background: #ffffff !important;
       font-size: 11px !important;
@@ -678,7 +690,7 @@ _Generado desde Sistema de Cotizacion_`;
             {/* COLUMNA IZQUIERDA: CONFIGURACIÓN */}
             <div className="lg:col-span-7 space-y-5 sm:space-y-6 w-full">
               <section className="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-4 sm:p-6 shadow-lg backdrop-blur-sm">
-                <div className="flex items-center justify-between mb-4 gap-2">
+                <div className="flex items-center justify-between mb-3 gap-2">
                   <div className="flex items-center gap-2.5 sm:gap-3">
                     <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-sm sm:text-base shrink-0">
                       1
@@ -704,8 +716,26 @@ _Generado desde Sistema de Cotizacion_`;
                   </button>
                 </div>
 
+                {/* FILTRO DE PESTAÑAS HORIZONTALES */}
+                <div className="flex gap-1.5 overflow-x-auto pb-2 mb-3.5 no-scrollbar">
+                  {['Todos', 'Industriales', 'Decorativos', 'Protección'].map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setCategoryFilter(cat)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
+                        categoryFilter === cat
+                          ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                          : 'bg-slate-900/80 text-slate-400 border border-slate-700/80 hover:text-white hover:bg-slate-800'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
                 <div className="grid grid-cols-1 gap-3">
-                  {services.map((s) => {
+                  {filteredServices.map((s) => {
                     const selectedItem = selectedSystems.find(item => item.serviceId === s.id);
                     const isSelected = !!selectedItem;
                     const currentPrice = selectedItem && selectedItem.customPrice !== undefined ? selectedItem.customPrice : s.basePrice;
@@ -794,7 +824,6 @@ _Generado desde Sistema de Cotizacion_`;
                           </div>
                         </div>
 
-                        {/* INPUT PARA SUPERFICIE INDEPENDIENTE */}
                         {isSelected && (
                           <div 
                             className="mt-1 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-xs bg-slate-950/40 p-2.5 rounded-lg"
@@ -836,7 +865,6 @@ _Generado desde Sistema de Cotizacion_`;
                   </div>
                 </div>
 
-                {/* CONTROL MANUAL DE DESCUENTO POR VOLUMEN / NEGOCIACIÓN */}
                 <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-700/80 mb-5 space-y-3">
                   <div className="flex items-center justify-between">
                     <label className="flex items-center gap-2 cursor-pointer">
@@ -922,6 +950,7 @@ _Generado desde Sistema de Cotizacion_`;
                 </div>
               </section>
 
+              {/* SECCIÓN 3: COMPLEMENTOS CON PRECIO EDITABLE */}
               <section className="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-4 sm:p-6 shadow-lg backdrop-blur-sm">
                 <div className="flex items-center justify-between mb-4 gap-2">
                   <div className="flex items-center gap-2.5 sm:gap-3">
@@ -947,6 +976,10 @@ _Generado desde Sistema de Cotizacion_`;
                 <div className="space-y-2.5">
                   {extrasOptions.map((ext) => {
                     const isChecked = activeExtras[ext.id];
+                    const customP = customExtraPrices[ext.id];
+                    const currentPrice = customP !== undefined ? customP : ext.unitPrice;
+                    const isModified = customP !== undefined && Number(customP) !== ext.unitPrice;
+
                     return (
                       <div
                         key={ext.id}
@@ -956,7 +989,7 @@ _Generado desde Sistema de Cotizacion_`;
                             : 'bg-slate-900/30 border-slate-800 hover:border-slate-700'
                         }`}
                       >
-                        <div className="flex items-center justify-between gap-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                           <label className="flex items-start gap-2.5 sm:gap-3 cursor-pointer flex-1">
                             <input
                               type="checkbox"
@@ -985,10 +1018,33 @@ _Generado desde Sistema de Cotizacion_`;
                             </div>
                           </label>
 
-                          <div className="text-right shrink-0">
-                            <span className="text-amber-400 font-mono font-bold text-xs sm:text-sm">
-                              ${ext.unitPrice} MXN /{ext.unit}
-                            </span>
+                          <div className="flex items-center justify-between sm:justify-end gap-1.5 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-800/80">
+                            <span className="text-[10px] text-slate-400 font-semibold sm:hidden">Precio Unitario:</span>
+                            <div className="flex items-center gap-1">
+                              <span className="text-amber-400 font-bold text-xs">$</span>
+                              <input
+                                type="number"
+                                value={currentPrice}
+                                onChange={(e) => {
+                                  if (!isChecked) toggleExtra(ext.id);
+                                  handlePriceExtraChange(ext.id, e.target.value);
+                                }}
+                                className={`w-20 sm:w-22 bg-slate-950 border rounded-lg px-2 py-1 text-right font-extrabold text-amber-400 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 ${
+                                  isModified ? 'border-amber-400 bg-amber-500/10' : 'border-slate-700'
+                                }`}
+                              />
+                              <span className="text-slate-400 text-xs font-semibold">/{ext.unit}</span>
+                              {isModified && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleResetExtraPrice(ext.id)}
+                                  title="Restablecer precio original"
+                                  className="text-slate-400 hover:text-amber-400 p-1"
+                                >
+                                  🔄
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
 
@@ -1099,19 +1155,25 @@ _Generado desde Sistema de Cotizacion_`;
                       Sistemas Epóxicos Aplicados:
                     </span>
                     <div className="space-y-2 pl-2 border-l-2 border-amber-500/40">
-                      {activeSystemsDetailed.map((sys) => (
-                        <div key={sys.id} className="flex justify-between items-start text-slate-200 gap-2">
-                          <div>
-                            <span className="font-semibold block text-white text-xs sm:text-sm">{sys.name}</span>
-                            <span className="text-[10px] sm:text-[11px] text-slate-400 font-mono">
-                              {sys.m2} m² × ${sys.effectivePrice.toLocaleString('es-MX')} MXN
+                      {activeSystemsDetailed.length > 0 ? (
+                        activeSystemsDetailed.map((sys) => (
+                          <div key={sys.id} className="flex justify-between items-start text-slate-200 gap-2">
+                            <div>
+                              <span className="font-semibold block text-white text-xs sm:text-sm">{sys.name}</span>
+                              <span className="text-[10px] sm:text-[11px] text-slate-400 font-mono">
+                                {sys.m2} m² × ${sys.effectivePrice.toLocaleString('es-MX')} MXN
+                              </span>
+                            </div>
+                            <span className="font-mono font-medium text-slate-200 text-xs sm:text-sm shrink-0">
+                              ${sys.totalCost.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                             </span>
                           </div>
-                          <span className="font-mono font-medium text-slate-200 text-xs sm:text-sm shrink-0">
-                            ${sys.totalCost.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                          </span>
-                        </div>
-                      ))}
+                        ))
+                      ) : (
+                        <p className="text-xs text-amber-400/80 italic py-1">
+                          👈 Selecciona al menos un sistema para cotizar.
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -1515,6 +1577,21 @@ _Generado desde Sistema de Cotizacion_`;
                   className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-amber-500"
                 />
               </div>
+
+              {modalType === 'system' && (
+                <div>
+                  <label className="block text-slate-300 font-medium mb-1">Categoría</label>
+                  <select
+                    value={newItem.category}
+                    onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-amber-500"
+                  >
+                    <option value="Industriales">Industriales</option>
+                    <option value="Decorativos">Decorativos</option>
+                    <option value="Protección">Protección</option>
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label className="block text-slate-300 font-medium mb-1">Descripción</label>
