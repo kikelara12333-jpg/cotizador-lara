@@ -523,7 +523,7 @@ ${includeIva ? `• *IVA (16%):* $${calculation.ivaAmount.toLocaleString('es-MX'
 
 *Notas Adicionales:* ${clientInfo.notes || 'Sin observaciones.'}
 __________________________________
-_Generado desde Cotizador Enrique Lara._`;
+_Generado desde Sistema de Cotización_`;
 
     const encodedText = encodeURIComponent(text);
     const phoneParam = clientInfo.phone ? clientInfo.phone.replace(/\D/g,'') : '';
